@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dimensionamento de Baterias UPS — Data Center</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700;800&display=swap');
+:root{
+  --bg:#eeeae2;--bg2:#f8f6f1;--panel:#fff;
+  --amber:#fab327;--amber2:#b07810;--amber-l:rgba(250,179,39,0.10);
+  --teal:#3f9ea2;--teal2:#2a6c6f;--teal-l:rgba(63,158,162,0.10);
+  --blk:#0d0d0d;--gray:#4d4d4d;--lgray:#c8c8c8;--mgray:#888;
+  --brd:rgba(13,13,13,0.10);--brd2:rgba(13,13,13,0.18);--brd3:rgba(13,13,13,0.05);
+  --red:#b81c1c;--red-l:rgba(184,28,28,0.08);
+  --grn:#1a7a1a;--grn-l:rgba(26,122,26,0.08);
+  --sh:0 1px 4px rgba(13,13,13,0.07);
+  --pur:#6b3fa0;--pur-l:rgba(107,63,160,0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--blk);font-family:'Barlow',sans-serif;min-height:100vh}
+.gbg{position:fixed;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(13,13,13,0.018) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(13,13,13,0.018) 40px);pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:0 1.5rem 5rem}
+header{background:var(--blk);border-radius:14px;padding:1.1rem 1.8rem;display:flex;align-items:center;margin:1.5rem 0 0;gap:1rem;flex-wrap:wrap}
+.htxt h1{font-size:1.55rem;font-weight:800;color:#fff;line-height:1.1}
+.htxt h1 em{color:var(--amber);font-style:normal}
+.htxt h1 em.tl{color:var(--teal)}
+.hsub{font-size:.7rem;color:#888;letter-spacing:.12em;text-transform:uppercase;margin-top:.2rem}
+.nwrap{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:.35rem}
+.ntag{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.68rem;letter-spacing:.06em}
+.nt{border:1px solid var(--teal);color:var(--teal)}
+.na{border:1px solid var(--amber);color:var(--amber)}
+.np{border:1px solid #9b6fd0;color:#9b6fd0}
+
+/* TAB NAV */
+.tab-nav{display:flex;gap:0;background:var(--blk);border-radius:0 0 14px 14px;margin-bottom:1.5rem;overflow:hidden;flex-wrap:wrap}
+.tab-btn{flex:1;min-width:120px;background:none;border:none;color:#666;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:.7rem .5rem;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.4rem}
+.tab-btn:hover{color:#aaa;background:rgba(255,255,255,.04)}
+.tab-btn.act{color:var(--amber);border-bottom-color:var(--amber);background:rgba(250,179,39,.07)}
+.tab-btn .ti{font-size:1rem}
+.tab-pane{display:none}
+.tab-pane.act{display:block}
+
+/* CARDS + GRID */
+.card{background:var(--panel);border:1px solid var(--brd);border-radius:12px;padding:1.1rem 1.3rem;box-shadow:var(--sh)}
+.ct{border-top:3px solid var(--teal)}.ca{border-top:3px solid var(--amber)}.cg{border-top:3px solid var(--grn)}.cp{border-top:3px solid var(--pur)}
+.card-title{display:flex;align-items:center;gap:.5rem;font-weight:800;font-size:.86rem;margin-bottom:.85rem;color:var(--blk)}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}
+.dt{background:var(--teal)}.da{background:var(--amber)}.dg{background:var(--grn)}.dp{background:var(--pur)}.dk{background:var(--blk)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.7rem}
+.g2i{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+@media(max-width:700px){.g2,.g3,.g4,.g2i{grid-template-columns:1fr}}
+.step-block{margin-bottom:1.4rem}
+.step-head{display:flex;align-items:center;gap:.8rem;margin-bottom:.9rem}
+.step-num{width:32px;height:32px;border-radius:50%;background:var(--blk);color:var(--amber);font-family:'Share Tech Mono',monospace;font-size:.88rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-title{font-size:.95rem;font-weight:800;color:var(--blk)}
+.step-desc{font-size:.73rem;color:var(--mgray);margin-top:.12rem}
+.divider{height:1px;background:var(--brd);margin:.65rem 0}
+
+/* FORM */
+.f{margin-bottom:.75rem}
+.f label{display:block;font-size:.63rem;color:var(--gray);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.28rem;font-weight:700}
+.f input,.f select{width:100%;background:var(--bg2);border:1px solid var(--brd2);border-radius:7px;color:var(--blk);font-family:'Share Tech Mono',monospace;font-size:.88rem;padding:.45rem .75rem;outline:none;transition:all .18s}
+.f input:focus,.f select:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(250,179,39,.1)}
+.f select option{background:#fff}
+
+/* BRANDS */
+.brand-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-bottom:.9rem}
+@media(max-width:700px){.brand-grid{grid-template-columns:repeat(2,1fr)}}
+.bc{border:2px solid var(--brd2);border-radius:10px;padding:.7rem .85rem;cursor:pointer;transition:all .18s;position:relative;background:var(--bg2)}
+.bc:hover{border-color:var(--amber);transform:translateY(-1px)}
+.bc.act{border-color:var(--amber);background:var(--amber-l)}
+.bc-logo{font-size:.8rem;font-weight:800;color:var(--blk)}
+.bc.act .bc-logo{color:var(--amber2)}
+.bc-series{font-size:.6rem;color:var(--mgray);margin:.12rem 0}
+.bc-range{font-size:.6rem;font-family:'Share Tech Mono',monospace;color:var(--teal2);background:var(--teal-l);border-radius:4px;padding:1px 5px;display:inline-block}
+.bc-chk{position:absolute;top:.45rem;right:.55rem;width:15px;height:15px;border-radius:50%;background:var(--amber);color:#fff;font-size:.62rem;display:none;align-items:center;justify-content:center;font-weight:700}
+.bc.act .bc-chk{display:flex}
+
+/* CHEM TABS */
+.ctabs{display:flex;border:1px solid var(--brd2);border-radius:8px;overflow:hidden;margin-bottom:.9rem}
+.ctab{flex:1;background:var(--bg2);border:none;border-right:1px solid var(--brd2);color:var(--gray);font-family:'Barlow',sans-serif;font-size:.74rem;font-weight:600;padding:.48rem .25rem;cursor:pointer;transition:all .15s;text-align:center;line-height:1.35}
+.ctab:last-child{border-right:none}
+.ctab:hover{background:var(--teal-l);color:var(--teal2)}
+.ctab.act{background:var(--blk);color:var(--teal);font-weight:700}
+.ctab small{font-size:.56rem;opacity:.8;display:block}
+
+/* BLOCK CARDS */
+.blk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.55rem;margin-bottom:.8rem}
+@media(max-width:700px){.blk-grid{grid-template-columns:repeat(2,1fr)}}
+.blk-card{border:2px solid var(--brd2);border-radius:9px;padding:.6rem .65rem;cursor:pointer;transition:all .18s;background:var(--bg2);text-align:center}
+.blk-card:hover{border-color:var(--teal)}
+.blk-card.act{border-color:var(--teal);background:var(--teal-l)}
+.blk-ah{font-size:.95rem;font-weight:800;color:var(--blk);font-family:'Share Tech Mono',monospace}
+.blk-card.act .blk-ah{color:var(--teal2)}
+.blk-v{font-size:.6rem;color:var(--mgray);margin:.1rem 0}
+.blk-br{font-size:.56rem;color:var(--mgray);line-height:1.4}
+.blk-card.act .blk-br{color:var(--teal2)}
+
+/* RUNTIME */
+.qbtns{display:flex;flex-wrap:wrap;gap:.38rem;margin-bottom:.8rem}
+.qbtn{background:var(--bg2);border:1px solid var(--brd2);border-radius:6px;color:var(--gray);font-family:'Share Tech Mono',monospace;font-size:.78rem;font-weight:700;padding:.28rem .6rem;cursor:pointer;transition:all .15s}
+.qbtn:hover{border-color:var(--amber);background:var(--amber-l);color:var(--amber2)}
+.qbtn.act{background:var(--blk);border-color:var(--blk);color:var(--amber)}
+.rt-inp-row{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-bottom:.7rem}
+.rt-inp{background:var(--bg2);border:2px solid var(--brd2);border-radius:9px;color:var(--blk);font-family:'Share Tech Mono',monospace;font-size:1.9rem;font-weight:700;padding:.3rem .75rem;outline:none;width:125px;text-align:center;transition:all .18s}
+.rt-inp:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(250,179,39,.1)}
+.rt-unit{font-size:.85rem;color:var(--mgray);font-weight:600}
+.tier-bar{display:flex;gap:.35rem;flex-wrap:wrap;flex:1}
+.t-tag{padding:.24rem .6rem;border-radius:5px;font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--brd2);color:var(--mgray);background:var(--bg2)}
+.t-tag.on{border-color:var(--amber);background:var(--amber-l);color:var(--amber2)}
+
+/* INFO BOX */
+.ib{border-radius:7px;padding:.55rem .85rem;font-size:.73rem;margin-bottom:.7rem;line-height:1.5}
+.ib-t{background:var(--teal-l);border:1px solid rgba(63,158,162,.25);color:var(--teal2)}
+.ib-a{background:var(--amber-l);border:1px solid rgba(250,179,39,.25);color:var(--amber2)}
+.ib-r{background:var(--red-l);border:1px solid rgba(184,28,28,.2);color:var(--red)}
+
+/* COMPAT */
+.compat-tbl{width:100%;border-collapse:collapse;font-size:.72rem}
+.compat-tbl th{background:var(--bg2);color:var(--gray);font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;padding:.35rem .65rem;text-align:left;border-bottom:2px solid var(--brd)}
+.compat-tbl td{padding:.38rem .65rem;border-bottom:1px solid var(--brd3);vertical-align:middle}
+.compat-tbl tr:last-child td{border-bottom:none}
+.compat-tbl tr.sel-brand td{background:rgba(250,179,39,.06)}
+.ck-ok{display:inline-block;background:var(--grn-l);border:1px solid rgba(26,122,26,.3);color:var(--grn);border-radius:4px;font-size:.6rem;font-weight:700;padding:1px 6px}
+.ck-warn{display:inline-block;background:var(--amber-l);border:1px solid rgba(250,179,39,.3);color:var(--amber2);border-radius:4px;font-size:.6rem;font-weight:700;padding:1px 6px}
+.ck-no{display:inline-block;background:var(--red-l);border:1px solid rgba(184,28,28,.25);color:var(--red);border-radius:4px;font-size:.6rem;font-weight:700;padding:1px 6px}
+
+/* CALC BUTTON */
+.cbtn{width:100%;background:var(--blk);border:none;border-radius:9px;color:#fff;font-family:'Barlow',sans-serif;font-size:.92rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.72rem;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:.5rem}
+.cbtn:hover{background:#222;transform:translateY(-1px)}
+.ba{color:var(--amber);font-size:1.05rem}
+
+/* RESULTS */
+.res-hidden{display:none}
+.sum-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.75rem;margin-bottom:1.1rem}
+@media(max-width:700px){.sum-row{grid-template-columns:1fr 1fr}}
+.sum-box{background:var(--panel);border-radius:12px;padding:.85rem 1rem;box-shadow:var(--sh);text-align:center}
+.sb-a{border:2px solid var(--amber)}.sb-t{border:2px solid var(--teal)}.sb-g{border:2px solid var(--grn)}.sb-k{border:2px solid var(--blk)}
+.sum-lbl{font-size:.58rem;color:var(--mgray);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.28rem}
+.sum-val{font-family:'Share Tech Mono',monospace;font-size:1.7rem;font-weight:700;line-height:1}
+.sv-a{color:var(--amber2)}.sv-t{color:var(--teal2)}.sv-g{color:var(--grn)}.sv-k{color:var(--blk)}
+.sum-sub{font-size:.62rem;color:var(--mgray);margin-top:.18rem}
+
+.eco-ban{background:linear-gradient(135deg,#f0faf8,#fffae8);border:1.5px solid rgba(63,158,162,.3);border-radius:12px;padding:1rem 1.3rem;margin-bottom:1.3rem;box-shadow:var(--sh)}
+.eco-ttl{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--teal2);margin-bottom:.75rem}
+.eco-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.6rem}
+@media(max-width:700px){.eco-grid{grid-template-columns:repeat(2,1fr)}}
+.eco-card{background:rgba(255,255,255,.7);border-radius:8px;padding:.55rem;text-align:center}
+.eco-val{font-family:'Share Tech Mono',monospace;font-size:1rem;font-weight:700;color:var(--teal2);display:block}
+.eco-val.a{color:var(--amber2)}
+.eco-lbl{font-size:.58rem;color:var(--gray);margin-top:.15rem;line-height:1.4}
+
+.sdiv{font-size:.65rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--amber2);display:flex;align-items:center;gap:.5rem;margin:.85rem 0 .6rem}
+.sdiv::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--brd2),transparent)}
+.sdiv.t{color:var(--teal2)}.sdiv.t::after{background:linear-gradient(90deg,rgba(63,158,162,.3),transparent)}
+.sdiv.g{color:var(--grn)}.sdiv.g::after{background:linear-gradient(90deg,rgba(26,122,26,.3),transparent)}
+
+.sv-row{display:flex;align-items:center;gap:.4rem;margin-bottom:.38rem}
+.sv-badge{background:var(--blk);color:var(--amber);font-family:'Share Tech Mono',monospace;font-size:.6rem;padding:2px 6px;border-radius:4px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.sv-badge.red{background:var(--red);color:#fff}
+.sv-track{display:flex;gap:.13rem;flex-wrap:wrap;padding:.42rem .52rem;background:var(--bg2);border-radius:6px;border:1px solid var(--brd2);flex:1;align-items:center}
+.sv-blk{width:16px;height:14px;border-radius:2px;flex-shrink:0}
+.sv-vrla{background:var(--teal)}.sv-li{background:var(--pur)}.sv-red{background:var(--lgray)}
+
+/* RANKING */
+.tbl-wrap{background:var(--panel);border:1px solid var(--brd);border-radius:12px;overflow:hidden;box-shadow:var(--sh);margin-bottom:1.1rem;overflow-x:auto}
+.dtbl{width:100%;border-collapse:collapse;font-size:.74rem;min-width:700px}
+.dtbl th{background:var(--blk);color:#fff;font-family:'Barlow',sans-serif;font-weight:700;font-size:.59rem;letter-spacing:.09em;text-transform:uppercase;padding:.52rem .65rem;text-align:left}
+.dtbl th.t{background:#1a4a4d}.dtbl th.a{background:#4a3000}.dtbl th.g{background:#0d3010}
+.dtbl td{padding:.45rem .65rem;border-bottom:1px solid var(--brd3);vertical-align:middle}
+.dtbl tr:last-child td{border-bottom:none}
+.dtbl tr:hover td{background:rgba(250,179,39,.03)}
+.dtbl tr.best td{background:rgba(26,122,26,.06)}
+.dtbl tr.worst td{background:rgba(184,28,28,.04)}
+.dtbl tr.sel td{background:rgba(63,158,162,.07)}
+.mono{font-family:'Share Tech Mono',monospace}
+.tag{display:inline-block;border-radius:4px;font-size:.58rem;font-weight:700;padding:1px 5px;letter-spacing:.03em;white-space:nowrap}
+.tg-ok{background:var(--grn-l);border:1px solid rgba(26,122,26,.3);color:var(--grn)}
+.tg-warn{background:var(--amber-l);border:1px solid rgba(250,179,39,.25);color:var(--amber2)}
+.tg-no{background:var(--red-l);border:1px solid rgba(184,28,28,.25);color:var(--red)}
+.tg-t{background:var(--teal-l);border:1px solid rgba(63,158,162,.25);color:var(--teal2)}
+.tg-p{background:var(--pur-l);border:1px solid rgba(107,63,160,.25);color:var(--pur)}
+.rbadge{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:.67rem}
+.rb-gld{background:var(--amber);color:#4a2e00}.rb-slv{background:#c0c0c0;color:#333}.rb-brz{background:#cd7f32;color:#fff}
+.rb-n{background:var(--bg2);color:var(--gray);border:1px solid var(--brd2)}.rb-bad{background:var(--red-l);color:var(--red);border:1px solid rgba(184,28,28,.3)}
+.fp-row{display:flex;align-items:center;gap:.38rem}
+.fp-track{flex:1;min-width:45px;background:var(--bg2);border-radius:3px;height:6px;overflow:hidden}
+.fp-fill{height:100%;border-radius:3px;transition:width .4s}
+
+/* ═══ LAYOUT TAB ═══ */
+.layout-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1.2rem}
+@media(max-width:700px){.layout-summary{grid-template-columns:1fr 1fr}}
+.ls-box{background:var(--panel);border-radius:10px;padding:.8rem .95rem;box-shadow:var(--sh);text-align:center}
+.ls-box.la{border:2px solid var(--amber)}.ls-box.lt{border:2px solid var(--teal)}.ls-box.lg{border:2px solid var(--grn)}.ls-box.lk{border:2px solid var(--blk)}
+.ls-lbl{font-size:.58rem;color:var(--mgray);text-transform:uppercase;letter-spacing:.09em;margin-bottom:.25rem}
+.ls-val{font-family:'Share Tech Mono',monospace;font-size:1.55rem;font-weight:700;line-height:1}
+.ls-sub{font-size:.62rem;color:var(--mgray);margin-top:.15rem}
+.cab-spec-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;margin-bottom:1.2rem}
+@media(max-width:700px){.cab-spec-grid{grid-template-columns:1fr}}
+.cab-spec-card{background:var(--panel);border:1px solid var(--brd);border-radius:10px;padding:.9rem 1rem;box-shadow:var(--sh)}
+.csc-title{font-size:.68rem;font-weight:800;color:var(--blk);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.06em}
+.csc-dim{font-family:'Share Tech Mono',monospace;font-size:1.2rem;font-weight:700;color:var(--teal2);margin:.3rem 0}
+.csc-row{display:flex;justify-content:space-between;font-size:.72rem;padding:.18rem 0;border-bottom:1px solid var(--brd3)}
+.csc-row:last-child{border-bottom:none}
+.csc-row span:first-child{color:var(--gray)}
+.csc-row span:last-child{font-family:'Share Tech Mono',monospace;font-weight:700;color:var(--blk)}
+/* SVG plan */
+.floorplan-wrap{background:var(--panel);border:1px solid var(--brd);border-radius:12px;padding:1.2rem;box-shadow:var(--sh);margin-bottom:1.2rem;overflow-x:auto}
+.fp-title{font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--amber2);margin-bottom:.85rem}
+#floorplan-svg{display:block;margin:0 auto}
+.legend-row{display:flex;gap:1.2rem;flex-wrap:wrap;margin-top:.8rem;font-size:.7rem;color:var(--gray)}
+.legend-item{display:flex;align-items:center;gap:.4rem}
+.legend-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+.arrangement-btns{display:flex;gap:.5rem;margin-bottom:.9rem}
+.arr-btn{background:var(--bg2);border:1px solid var(--brd2);border-radius:6px;color:var(--gray);font-family:'Barlow',sans-serif;font-size:.74rem;font-weight:600;padding:.32rem .75rem;cursor:pointer;transition:all .15s}
+.arr-btn:hover{border-color:var(--teal);color:var(--teal2)}
+.arr-btn.act{background:var(--blk);border-color:var(--blk);color:var(--amber)}
+
+/* ═══ MEMORIAL TAB ═══ */
+.mem-wrap{background:var(--panel);border:1px solid var(--brd);border-radius:12px;padding:1.8rem 2rem;box-shadow:var(--sh)}
+.mem-hdr{background:var(--blk);color:#fff;border-radius:8px;padding:.95rem 1.3rem;margin-bottom:1.1rem}
+.mem-h{font-size:1rem;font-weight:800}
+.mem-s{font-size:.68rem;color:#888;margin-top:.22rem}
+.mem-sec{margin-bottom:1.1rem}
+.mem-ttl{font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--amber2);display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem}
+.mem-ttl::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--brd2),transparent)}
+.mem-tbl{width:100%;border-collapse:collapse;font-size:.76rem}
+.mem-tbl td{padding:.32rem .55rem;border-bottom:1px solid var(--brd3)}
+.mem-tbl tr:last-child td{border-bottom:none}
+.mem-tbl td:first-child{color:var(--blk);font-weight:600;width:48%}
+.mem-tbl td:last-child{font-family:'Share Tech Mono',monospace;color:var(--teal2);text-align:right}
+.formula{background:var(--bg2);border-left:3px solid var(--amber);padding:.45rem .85rem;margin:.35rem 0;font-size:.76rem;font-family:'Share Tech Mono',monospace;border-radius:0 5px 5px 0;line-height:1.65}
+.mstep{display:flex;gap:.5rem;margin-bottom:.5rem;font-size:.78rem;align-items:flex-start}
+.mstep-n{width:20px;height:20px;border-radius:50%;background:var(--amber);color:#fff;font-weight:800;font-size:.65rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.1rem}
+.mem-prose{font-size:.8rem;line-height:1.75;color:var(--blk);margin:.4rem 0;padding:.55rem .8rem;background:var(--bg2);border-radius:6px;border-left:3px solid var(--teal)}
+.mem-note{font-size:.7rem;color:var(--mgray);line-height:1.65;padding-top:.6rem;border-top:1px solid var(--brd);margin-top:.6rem}
+.print-btn{background:var(--grn-l);border:1px solid rgba(26,122,26,.3);border-radius:8px;color:var(--grn);font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:700;padding:.42rem .95rem;cursor:pointer;letter-spacing:.05em;text-transform:uppercase;transition:all .15s;margin-left:.75rem}
+.print-btn:hover{background:var(--grn);color:#fff}
+
+/* ═══ REFERENCES TAB ═══ */
+.ref-filter-row{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem}
+.rf-btn{background:var(--bg2);border:1px solid var(--brd2);border-radius:6px;color:var(--gray);font-family:'Barlow',sans-serif;font-size:.72rem;font-weight:600;padding:.28rem .65rem;cursor:pointer;transition:all .15s}
+.rf-btn:hover{border-color:var(--teal);color:var(--teal2)}
+.rf-btn.act{background:var(--blk);border-color:var(--blk);color:var(--amber)}
+.ref-card{background:var(--panel);border:1px solid var(--brd);border-radius:12px;margin-bottom:1.1rem;overflow:hidden;box-shadow:var(--sh)}
+.ref-card-hdr{display:flex;align-items:center;gap:.5rem;padding:.75rem 1.1rem;border-bottom:1px solid var(--brd);font-weight:800;font-size:.82rem}
+.rca{border-top:3px solid var(--amber)}.rct{border-top:3px solid var(--teal)}.rcg{border-top:3px solid var(--grn)}.rcp{border-top:3px solid var(--pur)}.rck{border-top:3px solid var(--blk)}
+.ref-item{display:flex;gap:.8rem;padding:.8rem 1.1rem;border-bottom:1px solid var(--brd3);transition:background .15s}
+.ref-item:last-child{border-bottom:none}
+.ref-item:hover{background:rgba(250,179,39,.03)}
+.ref-num{width:22px;height:22px;border-radius:50%;background:var(--blk);color:var(--amber);font-family:'Share Tech Mono',monospace;font-size:.62rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.1rem}
+.ref-body{flex:1}
+.ref-title{font-size:.82rem;font-weight:700;color:var(--blk);text-decoration:none;display:block;margin-bottom:.18rem;transition:color .15s}
+.ref-title:hover{color:var(--teal2)}
+.ref-org{font-size:.65rem;color:var(--teal2);font-weight:600;margin-bottom:.3rem;font-family:'Share Tech Mono',monospace}
+.ref-desc{font-size:.73rem;color:var(--gray);line-height:1.6;margin-bottom:.38rem}
+.ref-tags{display:flex;gap:.3rem;flex-wrap:wrap}
+.rtag{display:inline-block;font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:4px;letter-spacing:.04em}
+.rtag-n{background:var(--teal-l);border:1px solid rgba(63,158,162,.25);color:var(--teal2)}
+.rtag-m{background:var(--amber-l);border:1px solid rgba(250,179,39,.25);color:var(--amber2)}
+.rtag-c{background:var(--grn-l);border:1px solid rgba(26,122,26,.3);color:var(--grn)}
+.rtag-l{background:var(--pur-l);border:1px solid rgba(107,63,160,.25);color:var(--pur)}
+.rtag-b{background:var(--red-l);border:1px solid rgba(184,28,28,.25);color:var(--red)}
+
+@media print{
+  .gbg,.tab-nav,header,.cbtn,.print-btn,.ref-filter-row,.arrangement-btns{display:none!important}
+  .tab-pane{display:block!important}
+  body{background:#fff}
+  .mem-wrap{box-shadow:none;border:none;padding:0}
+}
+</style>
+</head>
+<body>
+<div class="gbg"></div>
+<div class="wrap">
+
+<header>
+  <div class="htxt">
+    <h1>Baterias para <em>UPS</em> — <em class="tl">Data Center</em></h1>
+    <div class="hsub">VRLA · Li-Ion · 250–1500 kVA · IEEE 485 / IEC 60896 · Layout de Sala</div>
+  </div>
+  <div class="nwrap">
+    <span class="ntag na">VRLA 12V / 2V</span>
+    <span class="ntag nt">Li-Ion LFP / NMC</span>
+    <span class="ntag np">250–1500 kVA</span>
+  </div>
+</header>
+
+<!-- TAB NAV -->
+<div class="tab-nav">
+  <button class="tab-btn act" onclick="showTab('calc',this)"><span class="ti">⚙</span> Dimensionamento</button>
+  <button class="tab-btn" onclick="showTab('layout',this)"><span class="ti">🏭</span> Layout de Gabinetes</button>
+  <button class="tab-btn" onclick="showTab('memorial',this)"><span class="ti">📄</span> Memorial de Cálculo</button>
+  <button class="tab-btn" onclick="showTab('refs',this)"><span class="ti">📚</span> Referências</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- TAB: DIMENSIONAMENTO                                              -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="tab-pane act" id="tab-calc">
+
+  <div class="step-block">
+    <div class="step-head"><div class="step-num">1</div>
+      <div><div class="step-title">UPS e Carga</div>
+      <div class="step-desc">Dupla conversão on-line VFI (IEC 62040-3). Bus DC 480V nominal.</div></div>
+    </div>
+    <div class="brand-grid" id="brand-grid"></div>
+    <div class="g2">
+      <div class="card ca">
+        <div class="card-title"><span class="dot da"></span>&nbsp;Potência e Carga</div>
+        <div class="g2i">
+          <div class="f"><label>Potência nominal (kVA)</label>
+            <select id="ups-kva" onchange="updLoad()">
+              <option value="250">250 kVA</option><option value="300">300 kVA</option>
+              <option value="400">400 kVA</option><option value="500" selected>500 kVA</option>
+              <option value="600">600 kVA</option><option value="750">750 kVA</option>
+              <option value="800">800 kVA</option><option value="1000">1000 kVA</option>
+              <option value="1200">1200 kVA</option><option value="1500">1500 kVA</option>
+            </select>
+          </div>
+          <div class="f"><label>Fator de potência (FP)</label>
+            <select id="ups-fp" onchange="updLoad()">
+              <option value="0.9" selected>0,9 — padrão moderno</option>
+              <option value="1.0">1,0 — kW = kVA</option>
+              <option value="0.8">0,8 — legado</option>
+            </select>
+          </div>
+          <div class="f"><label>Carga real (%)</label>
+            <input type="number" id="load-pct" value="80" min="10" max="100" step="5" oninput="updLoad()">
+          </div>
+          <div class="f"><label>Eficiência inversor (%)</label>
+            <input type="number" id="ups-eta" value="96" min="85" max="99" step="0.5">
+          </div>
+        </div>
+        <div class="ib ib-a" id="load-preview"></div>
+      </div>
+      <div class="card ct">
+        <div class="card-title"><span class="dot dt"></span>&nbsp;Banco DC</div>
+        <div class="g2i">
+          <div class="f"><label>Tensão bus DC (V)</label>
+            <select id="dc-bus">
+              <option value="480" selected>480 V — 40×12V</option>
+              <option value="384">384 V — 32×12V</option>
+            </select>
+          </div>
+          <div class="f"><label>Temperatura ambiente (°C)</label>
+            <input type="number" id="amb-temp" value="25" min="15" max="40" step="1" oninput="updTemp()">
+          </div>
+          <div class="f"><label>Fator de envelhecimento</label>
+            <select id="age-fac">
+              <option value="1.25" selected>1,25 — fim vida (5a VRLA)</option>
+              <option value="1.15">1,15 — médio prazo (3a)</option>
+              <option value="1.05">1,05 — novo (1a)</option>
+              <option value="1.30">1,30 — conservador</option>
+            </select>
+          </div>
+          <div class="f"><label>Redundância de strings</label>
+            <select id="redund">
+              <option value="0">Nenhuma — N</option>
+              <option value="1" selected>N+1 recomendado</option>
+              <option value="2">N+2 missão crítica</option>
+            </select>
+          </div>
+        </div>
+        <div class="ib" id="temp-info"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step-block">
+    <div class="step-head"><div class="step-num">2</div>
+      <div><div class="step-title">Autonomia Desejada</div>
+      <div class="step-desc">Digite qualquer valor em minutos. Padrão DC: 4–15 min (arranque do gerador).</div></div>
+    </div>
+    <div class="card ca">
+      <div class="card-title"><span class="dot da"></span>&nbsp;Tempo de Backup</div>
+      <div style="font-size:.62rem;color:var(--gray);letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:.38rem">Atalhos</div>
+      <div class="qbtns" id="qbtns">
+        <button class="qbtn" onclick="setRT(4,this)">4 min</button>
+        <button class="qbtn act" onclick="setRT(5,this)">5 min</button>
+        <button class="qbtn" onclick="setRT(6,this)">6 min</button>
+        <button class="qbtn" onclick="setRT(8,this)">8 min</button>
+        <button class="qbtn" onclick="setRT(10,this)">10 min</button>
+        <button class="qbtn" onclick="setRT(15,this)">15 min</button>
+        <button class="qbtn" onclick="setRT(30,this)">30 min</button>
+        <button class="qbtn" onclick="setRT(60,this)">1 h</button>
+        <button class="qbtn" onclick="setRT(120,this)">2 h</button>
+        <button class="qbtn" onclick="setRT(240,this)">4 h</button>
+        <button class="qbtn" onclick="setRT(480,this)">8 h</button>
+      </div>
+      <div class="rt-inp-row">
+        <div>
+          <div style="font-size:.62rem;color:var(--gray);letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:.32rem">Valor livre</div>
+          <div style="display:flex;align-items:center;gap:.55rem">
+            <input class="rt-inp" type="number" id="rt-inp" value="5" min="1" max="1440" oninput="onRTtype(this.value)">
+            <span class="rt-unit">minutos</span>
+          </div>
+        </div>
+        <div class="tier-bar" id="tier-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step-block">
+    <div class="step-head"><div class="step-num">3</div>
+      <div><div class="step-title">Tipo e Bloco de Bateria</div>
+      <div class="step-desc">Selecione a química e o bloco. A compatibilidade por fabricante é verificada automaticamente.</div></div>
+    </div>
+    <div class="ctabs">
+      <button class="ctab act" onclick="setChem('V12',this)">🔋 VRLA 12V<small>Blocos · padrão</small></button>
+      <button class="ctab" onclick="setChem('V2',this)">⚡ VRLA 2V<small>Células · alta cap.</small></button>
+      <button class="ctab" onclick="setChem('LFP',this)">🟢 Li-Ion LFP<small>LiFePO₄</small></button>
+      <button class="ctab" onclick="setChem('NMC',this)">🔵 Li-Ion NMC<small>Alta densidade</small></button>
+    </div>
+    <div id="chem-V12"><div class="card ct" style="margin-bottom:.7rem"><div class="card-title"><span class="dot dt"></span>&nbsp;VRLA 12V</div><div class="blk-grid" id="bg-V12"></div><div class="ib ib-t">480 VDC → <strong>40 blocos 12V em série</strong> por string · DoD 80% · Vida 5–10 anos</div></div></div>
+    <div id="chem-V2" style="display:none"><div class="card ct" style="margin-bottom:.7rem"><div class="card-title"><span class="dot dt"></span>&nbsp;VRLA 2V</div><div class="blk-grid" id="bg-V2"></div><div class="ib ib-t">480 VDC → <strong>240 células 2V em série</strong> por string · Indicado para autonomia &gt;1h</div></div></div>
+    <div id="chem-LFP" style="display:none"><div class="card cp" style="margin-bottom:.7rem"><div class="card-title"><span class="dot dp"></span>&nbsp;Li-Ion LFP</div><div class="blk-grid" id="bg-LFP"></div><div class="ib" style="background:var(--pur-l);border:1px solid rgba(107,63,160,.2);color:var(--pur)">Módulos 48V · 10 em série = 480 VDC · DoD 90% · Vida 10–15 anos · BMS obrigatório</div></div></div>
+    <div id="chem-NMC" style="display:none"><div class="card" style="border-top:3px solid #1a4a8a;margin-bottom:.7rem"><div class="card-title"><span class="dot" style="background:#1a4a8a"></span>&nbsp;Li-Ion NMC</div><div class="blk-grid" id="bg-NMC"></div><div class="ib" style="background:rgba(26,74,138,.07);border:1px solid rgba(26,74,138,.2);color:#1a3a6a">Módulos 48V · Alta densidade · HVAC dedicado + proteção runaway</div></div></div>
+    <div class="card cg">
+      <div class="card-title"><span class="dot dg"></span>&nbsp;Compatibilidade UPS × Química</div>
+      <div style="overflow-x:auto"><table class="compat-tbl" id="compat-tbl"></table></div>
+      <div class="ib ib-t" style="margin-top:.7rem;margin-bottom:0;font-size:.7rem">
+        <strong style="color:var(--grn)">✓</strong> Homologado &nbsp;|&nbsp; <strong style="color:var(--amber2)">⚠</strong> Requer BMS externo/aprovação &nbsp;|&nbsp; <strong style="color:var(--red)">✕</strong> Sem suporte oficial
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:1.5rem">
+    <button class="cbtn" onclick="doCalc()"><span class="ba">▶</span> Calcular e Gerar Ranking Completo</button>
+  </div>
+
+  <!-- RESULTS inside calc tab -->
+  <div id="calc-results" class="res-hidden">
+    <div class="step-head">
+      <div class="step-num" style="background:var(--amber);color:var(--blk)">4</div>
+      <div><div class="step-title">Resultado — Solução Configurada</div>
+      <div class="step-desc" id="res-desc"></div></div>
+    </div>
+    <div class="sum-row">
+      <div class="sum-box sb-a"><div class="sum-lbl">Total de blocos</div><div class="sum-val sv-a" id="r-blk">—</div><div class="sum-sub" id="r-blk-s">—</div></div>
+      <div class="sum-box sb-t"><div class="sum-lbl">Strings paralelo</div><div class="sum-val sv-t" id="r-str">—</div><div class="sum-sub" id="r-str-s">—</div></div>
+      <div class="sum-box sb-g"><div class="sum-lbl">Energia total</div><div class="sum-val sv-g" id="r-kwh">—</div><div class="sum-sub">kWh nominal</div></div>
+      <div class="sum-box sb-k"><div class="sum-lbl">Área de piso</div><div class="sum-val sv-k" id="r-fp">—</div><div class="sum-sub">m² (estimado)</div></div>
+    </div>
+    <div class="eco-ban">
+      <div class="eco-ttl">Parâmetros — IEEE 485 / IEC 60896</div>
+      <div class="eco-grid">
+        <div class="eco-card"><span class="eco-val" id="p-pload">—</span><div class="eco-lbl">Carga real (kW)</div></div>
+        <div class="eco-card"><span class="eco-val a" id="p-idc">—</span><div class="eco-lbl">Corrente DC/string (A)</div></div>
+        <div class="eco-card"><span class="eco-val" id="p-ahraw">—</span><div class="eco-lbl">Ah brutos</div></div>
+        <div class="eco-card"><span class="eco-val a" id="p-ahcor">—</span><div class="eco-lbl">Ah corrigidos</div></div>
+        <div class="eco-card"><span class="eco-val" id="p-facs">—</span><div class="eco-lbl">CF_age × CF_temp / CF_Pk</div></div>
+      </div>
+    </div>
+    <div class="sdiv t">Banco de Baterias — Strings</div>
+    <div class="card" style="border-top:3px solid var(--teal);margin-bottom:1.1rem">
+      <div id="sv-container"></div>
+      <div class="divider"></div>
+      <div id="sv-legend" style="font-size:.69rem;color:var(--gray);line-height:1.9"></div>
+    </div>
+    <div class="sdiv g">Ranking Completo — Pior (maior área) → Melhor</div>
+    <div class="card" style="border-top:3px solid var(--grn);margin-bottom:.7rem;padding:.75rem 1rem">
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:.74rem;color:var(--gray)">
+        <span>💀 <strong style="color:var(--red)">Pior</strong> — maior área de piso</span>
+        <span>🏆 <strong style="color:var(--grn)">Melhor</strong> — menor área + menor peso</span>
+        <span>⭐ <strong style="color:var(--amber2)">Selecionado</strong> — passo 3</span>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table class="dtbl">
+        <thead><tr>
+          <th>Rank</th><th>Tipo / Bloco</th><th class="t">Strings</th>
+          <th>Bl/str</th><th>Total</th><th class="a">Área m²</th>
+          <th>Peso kg</th><th>kWh</th><th class="g">Compat.</th><th>Score</th>
+        </tr></thead>
+        <tbody id="rank-tbody"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:.7rem;margin-top:1rem">
+      <button class="cbtn" style="flex:1;min-width:160px;background:var(--teal2)" onclick="showTab('layout',document.querySelectorAll('.tab-btn')[1])">🏭 Ver Layout de Gabinetes</button>
+      <button class="cbtn" style="flex:1;min-width:160px;background:#3a3a3a" onclick="showTab('memorial',document.querySelectorAll('.tab-btn')[2])">📄 Gerar Memorial</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- TAB: LAYOUT DE GABINETES                                          -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-layout">
+  <div id="layout-no-calc" style="text-align:center;padding:3rem 1rem;color:var(--mgray)">
+    <div style="font-size:2rem;margin-bottom:.6rem">🏭</div>
+    <div style="font-size:.9rem;font-weight:700">Execute o cálculo primeiro</div>
+    <div style="font-size:.78rem;margin-top:.3rem">Vá para a aba <strong>Dimensionamento</strong> e clique em Calcular</div>
+  </div>
+  <div id="layout-content" style="display:none">
+    <div class="step-head" style="padding-top:.5rem">
+      <div class="step-num" style="background:var(--grn);color:#fff">■</div>
+      <div><div class="step-title">Layout de Gabinetes de Bateria</div>
+      <div class="step-desc" id="layout-desc"></div></div>
+    </div>
+
+    <div class="layout-summary" id="layout-summary"></div>
+
+    <div class="cab-spec-grid" id="cab-spec-grid"></div>
+
+    <div class="floorplan-wrap">
+      <div class="fp-title">Planta Baixa — Vista Superior (escala aprox. 1 m = 60 px)</div>
+      <div class="arrangement-btns">
+        <button class="arr-btn act" onclick="setArr('1row',this)">1 Fileira</button>
+        <button class="arr-btn" onclick="setArr('2row',this)">2 Fileiras</button>
+        <button class="arr-btn" onclick="setArr('l',this)">Arranjo em L</button>
+      </div>
+      <div id="fp-svg-wrap">
+        <svg id="floorplan-svg"></svg>
+      </div>
+      <div class="legend-row" id="fp-legend"></div>
+    </div>
+
+    <div class="card ct" style="margin-bottom:1.1rem">
+      <div class="card-title"><span class="dot dt"></span>&nbsp;Especificações do Gabinete Recomendado</div>
+      <div id="cab-detail"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- TAB: MEMORIAL DE CÁLCULO                                          -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-memorial">
+  <div id="memorial-no-calc" style="text-align:center;padding:3rem 1rem;color:var(--mgray)">
+    <div style="font-size:2rem;margin-bottom:.6rem">📄</div>
+    <div style="font-size:.9rem;font-weight:700">Execute o cálculo primeiro</div>
+    <div style="font-size:.78rem;margin-top:.3rem">Vá para a aba <strong>Dimensionamento</strong> e clique em Calcular</div>
+  </div>
+  <div id="memorial-content" style="display:none">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:1rem;flex-wrap:wrap">
+      <button class="cbtn" style="flex:1;min-width:160px;background:var(--teal2)" onclick="buildMemorial()">📄 Gerar / Atualizar Memorial</button>
+      <button class="print-btn" onclick="window.print()">🖨 Imprimir / PDF</button>
+    </div>
+    <div id="mem-output"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- TAB: REFERÊNCIAS                                                  -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-refs">
+  <div style="margin-bottom:1rem;padding-top:.5rem">
+    <div style="font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--amber2);margin-bottom:.6rem">Filtrar por categoria</div>
+    <div class="ref-filter-row">
+      <button class="rf-btn act" onclick="filterRef('all',this)">Todas</button>
+      <button class="rf-btn" onclick="filterRef('norma',this)">Normas IEEE/IEC/ABNT</button>
+      <button class="rf-btn" onclick="filterRef('ups',this)">Fabricantes UPS</button>
+      <button class="rf-btn" onclick="filterRef('bat',this)">Fabricantes Bateria</button>
+      <button class="rf-btn" onclick="filterRef('calc',this)">Metodologia</button>
+    </div>
+  </div>
+
+  <!-- NORMAS -->
+  <div class="ref-card rca" data-cat="norma">
+    <div class="ref-card-hdr"><span class="dot da"></span>&nbsp;Normas Técnicas — IEEE / IEC / ABNT / TIA / NFPA</div>
+
+    <div class="ref-item">
+      <div class="ref-num">1</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://standards.ieee.org/ieee/485/3940/" target="_blank">IEEE Std 485:2020 — Recommended Practice for Sizing Lead-Acid Batteries</a>
+        <div class="ref-org">IEEE — Institute of Electrical and Electronics Engineers</div>
+        <div class="ref-desc">Norma principal para dimensionamento de baterias estacionárias de chumbo-ácido (VRLA e flooded). Define a metodologia de cálculo de ampères-hora, fatores de correção de temperatura, envelhecimento, taxa de descarga (Peukert) e profundidade de descarga. Recomenda margem mínima de 10–25% sobre o valor calculado. Referência obrigatória para projetos de UPS em data centers nos padrões norte-americanos e internacionais.</div>
+        <div class="ref-tags"><span class="rtag rtag-n">Norma IEEE</span><span class="rtag rtag-c">Dimensionamento</span><span class="rtag rtag-n">VRLA</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">2</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.iec.ch/publication/3503" target="_blank">IEC 60896-21:2004 — Stationary Lead-Acid Batteries — VRLA (Requirements)</a>
+        <div class="ref-org">IEC — International Electrotechnical Commission</div>
+        <div class="ref-desc">Define requisitos de desempenho, testes de capacidade, ciclo de vida e critérios de aceitação para baterias VRLA estacionárias. Complemento europeu ao IEEE 485. Define EODV (End-of-Discharge Voltage) de 1,75 V/célula para VRLA e fornece metodologia de curvas de descarga em função da temperatura. Aplicável diretamente ao cálculo de bancos de UPS.</div>
+        <div class="ref-tags"><span class="rtag rtag-n">Norma IEC</span><span class="rtag rtag-n">VRLA</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">3</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.iec.ch/publication/6412" target="_blank">IEC 60896-22:2004 — Stationary VRLA (Test Methods)</a>
+        <div class="ref-org">IEC</div>
+        <div class="ref-desc">Métodos de ensaio complementares à IEC 60896-21. Define procedimentos de descarga controlada, medição de impedância interna, teste de float e avaliação de vida útil residual. Referência para laudos de manutenção e testes de comissionamento de bancos de bateria VRLA.</div>
+        <div class="ref-tags"><span class="rtag rtag-n">Norma IEC</span><span class="rtag rtag-n">VRLA</span><span class="rtag rtag-c">Ensaios</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">4</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.iec.ch/publication/6413" target="_blank">IEC 62040-3:2021 — UPS — Performance Requirements and Test Methods</a>
+        <div class="ref-org">IEC</div>
+        <div class="ref-desc">Norma de desempenho para UPS. Define as classes de topologia: VFI-SS-111 (dupla conversão, sem interrupção, saída independente de frequência e tensão de entrada). Especifica eficiência mínima, distorção harmônica (THDi), fator de potência e comportamento durante transitórios. Todo UPS de data center deve ser VFI-SS-111 conforme esta norma.</div>
+        <div class="ref-tags"><span class="rtag rtag-n">Norma IEC</span><span class="rtag rtag-m">UPS</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">5</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.iec.ch/publication/6411" target="_blank">IEC 62040-1:2017 — UPS — Safety Requirements</a>
+        <div class="ref-org">IEC</div>
+        <div class="ref-desc">Requisitos de segurança para sistemas UPS: proteção elétrica, isolamento, ventilação do compartimento de baterias, sinalização de falhas. Define requisitos específicos para baterias de chumbo-ácido e Li-Ion conectadas a UPS, incluindo proteção contra sobretensão, sobrecorrente e temperatura.</div>
+        <div class="ref-tags"><span class="rtag rtag-n">Norma IEC</span><span class="rtag rtag-m">UPS</span><span class="rtag rtag-b">Segurança</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">6</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.abnt.org.br/normalizacao/lista-de-publicacoes/abnt?cod=NR-103" target="_blank">ABNT NBR 16612:2020 — Requisitos de Energia para TIC — Data Centers</a>
+        <div class="ref-org">ABNT — Associação Brasileira de Normas Técnicas</div>
+        <div class="ref-desc">Norma brasileira equivalente à EN 50600-2-2. Define requisitos de infraestrutura elétrica para data centers, incluindo dimensionamento de sistemas UPS, baterias, geração de emergência e distribuição de energia. Obrigatória para projetos de data center no Brasil. Classifica níveis de disponibilidade (Classe 1 a 4).</div>
+        <div class="ref-tags"><span class="rtag rtag-n">ABNT NBR</span><span class="rtag rtag-m">Data Center</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">7</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://tiaonline.org/product/tia-942-b/" target="_blank">TIA-942-B:2017 — Telecommunications Infrastructure Standard for Data Centers</a>
+        <div class="ref-org">TIA — Telecommunications Industry Association</div>
+        <div class="ref-desc">Padrão americano para infraestrutura de data centers. Define os 4 níveis (Tier I a IV) e requisitos de redundância para sistemas de energia, incluindo UPS, baterias e geração. Tier III exige N+1 em sistemas de UPS e baterias. Tier IV requer 2N (redundância total). Amplamente adotado internacionalmente como referência de projeto.</div>
+        <div class="ref-tags"><span class="rtag rtag-n">TIA</span><span class="rtag rtag-m">Data Center</span><span class="rtag rtag-c">Tier</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">8</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.nfpa.org/codes-and-standards/nfpa-855-standard-for-the-installation-of-stationary-energy-storage-systems" target="_blank">NFPA 855:2023 — Standard for ESS Installation (incl. Li-Ion)</a>
+        <div class="ref-org">NFPA — National Fire Protection Association</div>
+        <div class="ref-desc">Norma de segurança para instalação de sistemas de armazenamento de energia estacionários, incluindo Li-Ion em UPS de data centers. Define limites de energia por compartimento, requisitos de supressão de incêndio específicos para Li-Ion (runaway térmico), separação física e sinalização. Obrigatória para instalações Li-Ion acima de 20 kWh nos EUA e referência adotada em projetos brasileiros.</div>
+        <div class="ref-tags"><span class="rtag rtag-n">NFPA</span><span class="rtag rtag-l">Li-Ion</span><span class="rtag rtag-b">Incêndio</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">9</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://standards.ieee.org/ieee/1187/3633/" target="_blank">IEEE 1188:2005 — Recommended Practice for Maintenance of VRLA Batteries</a>
+        <div class="ref-org">IEEE</div>
+        <div class="ref-desc">Define procedimentos de manutenção preventiva para baterias VRLA: inspeção visual, medição de tensão de float, teste de descarga periódico, impedância interna. Recomenda intervalo de testes a cada 12 meses (routine) e a cada 24 meses (performance). Estabelece critérios de substituição por queda de capacidade abaixo de 80% do nominal.</div>
+        <div class="ref-tags"><span class="rtag rtag-n">Norma IEEE</span><span class="rtag rtag-c">Manutenção</span><span class="rtag rtag-n">VRLA</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UPS MANUFACTURERS -->
+  <div class="ref-card rct" data-cat="ups">
+    <div class="ref-card-hdr"><span class="dot dt"></span>&nbsp;Fabricantes de UPS — Documentação Técnica Oficial</div>
+
+    <div class="ref-item">
+      <div class="ref-num">10</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.se.com/us/en/product-range/63732-galaxy-vx/" target="_blank">Schneider Electric — Galaxy VX (500–1500 kVA)</a>
+        <div class="ref-org">Schneider Electric</div>
+        <div class="ref-desc">UPS trifásico de alta potência para data centers. Bus DC 480V. Eficiência 96% (ON) / 99% (ECO). Compatível com VRLA 12V, VRLA 2V e gabinetes Li-Ion LFP/NMC homologados (Galaxy Lithium-ion Battery Cabinets). Possui BMS integrado para Li-Ion. O Galaxy VL cobre 200–500 kVA com mesma plataforma. Documentação técnica disponível no EcoStruxure Power Design.</div>
+        <div class="ref-tags"><span class="rtag rtag-m">Fabricante</span><span class="rtag rtag-m">UPS</span><span class="rtag rtag-c">500–1500 kVA</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">11</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.eaton.com/us/en-us/catalog/backup-power-ups-surge-it-power-distribution/eaton-9395-ups.html" target="_blank">Eaton 9395 (225–1100 kVA) — Technical Specifications</a>
+        <div class="ref-org">Eaton Corporation</div>
+        <div class="ref-desc">UPS dupla conversão trifásico. Bus DC 540V (floating). Compatível com VRLA 12V (40 blocos/string @ 480V ou 45 @ 540V) e Li-Ion NMC via Samsung SDI Gen3. LFP requer aprovação técnica (não é homologação padrão). Eficiência 96% típica. Possui ferramenta de dimensionamento de autonomia (Powerware Battery Runtime Calculator) para download gratuito.</div>
+        <div class="ref-tags"><span class="rtag rtag-m">Fabricante</span><span class="rtag rtag-m">UPS</span><span class="rtag rtag-c">225–1100 kVA</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">12</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.vertiv.com/en-us/products-catalog/critical-power/uninterruptible-power-supplies-ups/liebert-exl-s1-ups/" target="_blank">Vertiv Liebert EXL S1 (250–1250 kVA)</a>
+        <div class="ref-org">Vertiv (ex-Emerson Network Power)</div>
+        <div class="ref-desc">UPS transformerless dupla conversão. Bus DC 480VDC. Compatível com VRLA 12V/2V e Li-Ion LFP e NMC (Vertiv Li-Ion Battery Cabinet, gabinete de 18 kWh). Eficiência 96,5%. O modelo EXM é a versão modular escalável. Ferramenta de dimensionamento disponível no portal Vertiv (Liebert Battery Runtime Estimator).</div>
+        <div class="ref-tags"><span class="rtag rtag-m">Fabricante</span><span class="rtag rtag-m">UPS</span><span class="rtag rtag-c">250–1250 kVA</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">13</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://new.abb.com/ups/ups-solutions/industrial-ups/dpa-ups" target="_blank">ABB DPA UPScaleS (25–1200 kVA)</a>
+        <div class="ref-org">ABB Ltd.</div>
+        <div class="ref-desc">UPS modular trifásico (módulos de 25 kW). Bus DC 480V. Compatível com VRLA 12V e 2V homologados. LFP requer BMS externo e aprovação da engenharia ABB. NMC não é suportado sem aprovação específica. Eficiência declarada de 96,5% em ON mode e 99% em ECO mode.</div>
+        <div class="ref-tags"><span class="rtag rtag-m">Fabricante</span><span class="rtag rtag-m">UPS</span><span class="rtag rtag-c">25–1200 kVA</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">14</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://e.huawei.com/en/products/enterprise-networking/ups/ups5000-e" target="_blank">Huawei UPS5000-E (80–800 kVA)</a>
+        <div class="ref-org">Huawei Digital Power</div>
+        <div class="ref-desc">UPS modular com eficiência declarada de 97% (online). Bus DC 480V. Compatível com VRLA 12V/2V e LFP (homologado pelo fabricante). Não suporta oficialmente NMC. Possui aplicativo SmartPower para dimensionamento e monitoramento. Interessante para data centers que já utilizam infraestrutura Huawei (integração nativa com FusionModule).</div>
+        <div class="ref-tags"><span class="rtag rtag-m">Fabricante</span><span class="rtag rtag-m">UPS</span><span class="rtag rtag-c">80–800 kVA</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">15</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.deltapowersolutions.com/en/mcis/commercial-3-phase-ups-ultron-hph-series.php" target="_blank">Delta Ultron HPH (250–1500 kVA)</a>
+        <div class="ref-org">Delta Electronics</div>
+        <div class="ref-desc">UPS trifásico dupla conversão transformerless. Bus DC 480V. Compatível com VRLA 12V/2V. LFP em fase de homologação (verificar versão de firmware). Eficiência 96% em ON mode. Possui modo ECO e modo alta eficiência. Ferramenta de seleção de bateria disponível no portal Delta Power.</div>
+        <div class="ref-tags"><span class="rtag rtag-m">Fabricante</span><span class="rtag rtag-m">UPS</span><span class="rtag rtag-c">250–1500 kVA</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BATTERY MANUFACTURERS -->
+  <div class="ref-card rcp" data-cat="bat">
+    <div class="ref-card-hdr"><span class="dot dp"></span>&nbsp;Fabricantes de Baterias — Fichas Técnicas e Dados de Dimensionamento</div>
+
+    <div class="ref-item">
+      <div class="ref-num">16</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.enersys.com/en/products/batteries/reserve-power/datasafe-hx/" target="_blank">EnerSys DataSafe HX — VRLA 12V (80–260 Ah)</a>
+        <div class="ref-org">EnerSys</div>
+        <div class="ref-desc">Linha de referência para UPS de data center. Disponível de 80 a 260 Ah em 12V. Tabelas de descarga W/bloco para C/1h a C/15min. Peso típico 12V 100Ah: ~27 kg. Vida design 10 anos a 25°C. Possui ciclos de recarga rápida (1C). Dimensões padronizadas compatíveis com gabinetes de bateria de múltiplos fabricantes de UPS.</div>
+        <div class="ref-tags"><span class="rtag rtag-l">VRLA 12V</span><span class="rtag rtag-m">Fabricante</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">17</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.csb-battery.com/product/product_all.php?lang=en&big=1&s1=8" target="_blank">CSB Battery — GPL / HR Series (12V, 65–260 Ah)</a>
+        <div class="ref-org">CSB Battery Co., Ltd.</div>
+        <div class="ref-desc">VRLA 12V amplamente utilizado em UPS. GPL: uso geral, design 10 anos. HR/HRL: alta taxa de descarga. CSB HR1234W (12V 200Ah) é o bloco de referência especificado por vários fabricantes de UPS (Schneider, Vertiv). Tabelas de descarga W/célula disponíveis para C/3min a C/10h. Produção em Taiwan com certificações UL/CE/IEC.</div>
+        <div class="ref-tags"><span class="rtag rtag-l">VRLA 12V</span><span class="rtag rtag-m">Fabricante</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">18</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.gs-yuasa.com/en/sgs/product/stationary.html" target="_blank">GS Yuasa — SHR / SER Series (12V e 2V)</a>
+        <div class="ref-org">GS Yuasa International Ltd.</div>
+        <div class="ref-desc">SHR: VRLA 12V alta taxa (65–200 Ah) para UPS, datasheets incluem curvas de Peukert por temperatura. SER: VRLA 2V (200–3000 Ah) para bancos de alta capacidade e longa autonomia. Fornece fatores de derating por temperatura em intervalos de 5°C. Vida útil design 10 anos para SHR e 12–15 anos para SER.</div>
+        <div class="ref-tags"><span class="rtag rtag-l">VRLA 12V</span><span class="rtag rtag-l">VRLA 2V</span><span class="rtag rtag-m">Fabricante</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">19</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.saftbatteries.com/products-solutions/products/intensium-max" target="_blank">Saft Intensium MAX — Li-Ion UPS Cabinets (NMC/LFP)</a>
+        <div class="ref-org">Saft (TotalEnergies)</div>
+        <div class="ref-desc">Gabinetes Li-Ion para UPS industriais e data centers. Módulos de 20 a 100 kWh. BMS integrado com CAN/Modbus. Homologado com Schneider Galaxy, Eaton 9395 e Vertiv. 3000–5000 ciclos completos, 12–15 anos de vida útil. DoD máx 90%. Alta taxa de descarga (até 2C). Certificação UL 9540A para instalações sujeitas à NFPA 855.</div>
+        <div class="ref-tags"><span class="rtag rtag-l">Li-Ion NMC</span><span class="rtag rtag-l">Li-Ion LFP</span><span class="rtag rtag-m">Fabricante</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">20</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.byd.com/en/energy/ByDBattery-BoxPro.html" target="_blank">BYD Battery-Box Pro — LFP Modules (5–10 kWh)</a>
+        <div class="ref-org">BYD Company Ltd.</div>
+        <div class="ref-desc">Módulos LFP de 5–10 kWh. Configuração 48V com BMS integrado (RS485/CAN). 10 módulos em série = 480 VDC. DoD máx 90%. Vida 10–15 anos a 25°C. Proteção de célula individual (temperatura, sobretensão, subvoltagem). Certificações CE, UL, TÜV. Utilizado em aplicações UPS industriais e residenciais.</div>
+        <div class="ref-tags"><span class="rtag rtag-l">Li-Ion LFP</span><span class="rtag rtag-m">Fabricante</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">21</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.fiamm.com/en/products/ups-stationary-batteries/" target="_blank">FIAMM — FLB / FLL Series (VRLA 2V, 100–3000 Ah)</a>
+        <div class="ref-org">FIAMM Energy Technology S.p.A.</div>
+        <div class="ref-desc">VRLA 2V de alta capacidade para bancos de longa autonomia. FLL: série padrão (100–2000 Ah). FLB: série de alta taxa. Células de 2V facilitam a configuração de strings para diferentes tensões de bus DC. Disponíveis em racks abertos padrão 19" ou 23". Vida design até 20 anos para séries Long Life. Amplamente utilizadas em subprefeituras de data center e instalações industriais.</div>
+        <div class="ref-tags"><span class="rtag rtag-l">VRLA 2V</span><span class="rtag rtag-m">Fabricante</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- METODOLOGIA -->
+  <div class="ref-card rcg" data-cat="calc">
+    <div class="ref-card-hdr"><span class="dot dg"></span>&nbsp;Metodologia de Cálculo e Artigos Técnicos de Referência</div>
+
+    <div class="ref-item">
+      <div class="ref-num">22</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://standards.ieee.org/ieee/485/3940/" target="_blank">IEEE 485:2020 — Metodologia Completa (seção 5: sizing procedure)</a>
+        <div class="ref-org">IEEE Std 485:2020</div>
+        <div class="ref-desc">A seção 5 da norma detalha passo a passo: (a) definição da carga, (b) seleção da tensão de bus DC, (c) determinação do perfil de descarga, (d) seleção da célula, (e) cálculo da quantidade em série, (f) cálculo da quantidade em paralelo com fatores de correção CF_temp, CF_age, CF_rate (Peukert). Esta calculadora segue este fluxo diretamente.</div>
+        <div class="ref-tags"><span class="rtag rtag-c">Metodologia</span><span class="rtag rtag-n">IEEE</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">23</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://myelectrical.com/notes/entryid/164/ups-battery-sizing" target="_blank">UPS Battery Sizing — Practical Engineering Guide</a>
+        <div class="ref-org">MyElectrical.com / IEEE Practice</div>
+        <div class="ref-desc">Guia prático com exemplos numéricos completos de dimensionamento de banco de baterias para UPS. Inclui tabelas de Peukert por fabricante, comparativo VRLA 12V vs 2V para diferentes autonomias, e discussão sobre profundidade de descarga ótima para maximizar ciclo de vida. Base para os fatores de Peukert utilizados nesta calculadora.</div>
+        <div class="ref-tags"><span class="rtag rtag-c">Cálculo</span><span class="rtag rtag-n">VRLA</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">24</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.powertechsystems.eu/home/tech-corner/lithium-ion-battery-vs-lead-acid-battery/" target="_blank">Li-Ion vs VRLA — TCO Analysis for UPS Applications</a>
+        <div class="ref-org">Power Technology Systems (Saft Group)</div>
+        <div class="ref-desc">Análise de custo total de propriedade (TCO) comparando Li-Ion e VRLA para UPS de data center. Considera custo inicial, substituições ao longo de 15 anos, peso/espaço e eficiência de recarga. Conclui que Li-Ion é economicamente superior para ciclos de vida acima de 8 anos quando se considera o custo de 2–3 substituições de VRLA. Dados de densidade energética por m² e kg usados como referência nesta calculadora.</div>
+        <div class="ref-tags"><span class="rtag rtag-c">TCO</span><span class="rtag rtag-l">Li-Ion</span><span class="rtag rtag-l">VRLA</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">25</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://www.india.fujielectric.com/resources/technical-guide/ups-sizing-calculation" target="_blank">Fuji Electric — UPS Sizing Calculation Guide (com exemplos)</a>
+        <div class="ref-org">Fuji Electric India</div>
+        <div class="ref-desc">Guia técnico com 3 exemplos completos de dimensionamento de banco de bateria VRLA para UPS (5 min, 15 min e 1h), incluindo cálculo de corrente de descarga, fator Peukert aplicado, verificação do número de strings em paralelo e seleção do gabinete. Utiliza exatamente a fórmula IEEE 485 com EODV de 1,75 V/célula. Referência prática direta para engenheiros de campo.</div>
+        <div class="ref-tags"><span class="rtag rtag-c">Exemplos</span><span class="rtag rtag-c">Metodologia</span></div>
+      </div>
+    </div>
+
+    <div class="ref-item">
+      <div class="ref-num">26</div>
+      <div class="ref-body">
+        <a class="ref-title" href="https://datacenterss.com/data-center-power-planning-calculation-guide/" target="_blank">Data Center Power Planning Guide 2026 — UPS, Battery, Generator</a>
+        <div class="ref-org">DataCenterSS (atualizado 2026)</div>
+        <div class="ref-desc">Guia completo de planejamento de energia para data centers modernos, incluindo benchmarks de densidade de rack para cargas de IA (50–132 kW/rack), dimensionamento N/N+1/2N para UPS, metodologia de cálculo de baterias para diferentes tierings e orientações sobre BESS (Battery Energy Storage Systems) como alternativa a gerador diesel. Contextualiza os requisitos de autonomia por nível de Tier.</div>
+        <div class="ref-tags"><span class="rtag rtag-c">Data Center</span><span class="rtag rtag-c">Planejamento</span><span class="rtag rtag-m">UPS</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PEUKERT TABLE -->
+  <div class="ref-card rct" data-cat="calc">
+    <div class="ref-card-hdr"><span class="dot dt"></span>&nbsp;Tabela de Fator de Peukert (CF<sub>Pk</sub>) Usada nesta Calculadora</div>
+    <div class="ib ib-t" style="margin:.8rem 1.1rem .8rem">
+      O fator de Peukert corrige a capacidade disponível em função da taxa de descarga. VRLA sofre derating significativo em descargas rápidas (alta corrente). Li-Ion apresenta derating menor. Valores baseados em IEC 60896-21, datasheets EnerSys/CSB para VRLA e Samsung SDI/Saft para Li-Ion.
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;padding:.8rem 1.1rem">
+      <div>
+        <div style="font-size:.66rem;font-weight:800;color:var(--amber2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem">VRLA — Curva típica IEC 60896 / EnerSys</div>
+        <table style="width:100%;border-collapse:collapse;font-size:.74rem">
+          <tr style="background:var(--bg2)"><th style="padding:.28rem .6rem;text-align:left;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gray)">Tempo</th><th style="padding:.28rem .6rem;text-align:right;font-size:.6rem;color:var(--gray)">Cap. disp.</th><th style="padding:.28rem .6rem;text-align:right;font-size:.6rem;color:var(--gray)">C-rate</th></tr>
+          <tr><td style="padding:.25rem .6rem;border-bottom:1px solid var(--brd3)">1 min</td><td class="mono" style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);color:var(--red)">47%</td><td style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);font-size:.65rem;color:var(--mgray)">C0,017</td></tr>
+          <tr><td style="padding:.25rem .6rem;border-bottom:1px solid var(--brd3)"><strong>5 min</strong></td><td class="mono" style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);color:var(--amber2)"><strong>56%</strong></td><td style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);font-size:.65rem;color:var(--mgray)">C0,083</td></tr>
+          <tr><td style="padding:.25rem .6rem;border-bottom:1px solid var(--brd3)"><strong>10 min</strong></td><td class="mono" style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);color:var(--amber2)"><strong>65%</strong></td><td style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);font-size:.65rem;color:var(--mgray)">C0,17</td></tr>
+          <tr><td style="padding:.25rem .6rem;border-bottom:1px solid var(--brd3)"><strong>15 min</strong></td><td class="mono" style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);color:var(--amber2)"><strong>70%</strong></td><td style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);font-size:.65rem;color:var(--mgray)">C0,25</td></tr>
+          <tr><td style="padding:.25rem .6rem;border-bottom:1px solid var(--brd3)">30 min</td><td class="mono" style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);color:var(--teal2)">78%</td><td style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);font-size:.65rem;color:var(--mgray)">C0,5</td></tr>
+          <tr><td style="padding:.25rem .6rem;border-bottom:1px solid var(--brd3)">60 min</td><td class="mono" style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);color:var(--teal2)">85%</td><td style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);font-size:.65rem;color:var(--mgray)">C1</td></tr>
+          <tr><td style="padding:.25rem .6rem;border-bottom:1px solid var(--brd3)">120 min</td><td class="mono" style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);color:var(--teal2)">91%</td><td style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);font-size:.65rem;color:var(--mgray)">C2</td></tr>
+          <tr><td style="padding:.25rem .6rem">600 min</td><td class="mono" style="text-align:right;padding:.25rem .6rem;color:var(--grn)">100%</td><td style="text-align:right;padding:.25rem .6rem;font-size:.65rem;color:var(--mgray)">C10 (ref.)</td></tr>
+        </table>
+      </div>
+      <div>
+        <div style="font-size:.66rem;font-weight:800;color:var(--pur);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem">Li-Ion — Curva típica Samsung SDI / Saft</div>
+        <table style="width:100%;border-collapse:collapse;font-size:.74rem">
+          <tr style="background:var(--bg2)"><th style="padding:.28rem .6rem;text-align:left;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gray)">Tempo</th><th style="padding:.28rem .6rem;text-align:right;font-size:.6rem;color:var(--gray)">Cap. disp.</th><th style="padding:.28rem .6rem;text-align:right;font-size:.6rem;color:var(--gray)">vs VRLA</th></tr>
+          <tr><td style="padding:.25rem .6rem;border-bottom:1px solid var(--brd3)">1 min</td><td class="mono" style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);color:var(--amber2)">78%</td><td style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);font-size:.65rem;color:var(--grn)">+31%</td></tr>
+          <tr><td style="padding:.25rem .6rem;border-bottom:1px solid var(--brd3)"><strong>5 min</strong></td><td class="mono" style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);color:var(--teal2)"><strong>84%</strong></td><td style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);font-size:.65rem;color:var(--grn)">+28%</td></tr>
+          <tr><td style="padding:.25rem .6rem;border-bottom:1px solid var(--brd3)"><strong>10 min</strong></td><td class="mono" style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);color:var(--teal2)"><strong>88%</strong></td><td style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);font-size:.65rem;color:var(--grn)">+23%</td></tr>
+          <tr><td style="padding:.25rem .6rem;border-bottom:1px solid var(--brd3)"><strong>15 min</strong></td><td class="mono" style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);color:var(--teal2)"><strong>91%</strong></td><td style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);font-size:.65rem;color:var(--grn)">+21%</td></tr>
+          <tr><td style="padding:.25rem .6rem;border-bottom:1px solid var(--brd3)">30 min</td><td class="mono" style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);color:var(--grn)">94%</td><td style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);font-size:.65rem;color:var(--grn)">+16%</td></tr>
+          <tr><td style="padding:.25rem .6rem;border-bottom:1px solid var(--brd3)">60 min</td><td class="mono" style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);color:var(--grn)">96%</td><td style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);font-size:.65rem;color:var(--grn)">+11%</td></tr>
+          <tr><td style="padding:.25rem .6rem;border-bottom:1px solid var(--brd3)">120 min</td><td class="mono" style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);color:var(--grn)">98%</td><td style="text-align:right;padding:.25rem .6rem;border-bottom:1px solid var(--brd3);font-size:.65rem;color:var(--grn)">+7%</td></tr>
+          <tr><td style="padding:.25rem .6rem">600 min</td><td class="mono" style="text-align:right;padding:.25rem .6rem;color:var(--grn)">100%</td><td style="text-align:right;padding:.25rem .6rem;font-size:.65rem;color:var(--mgray)">igual</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- /refs tab -->
+
+</div><!-- /wrap -->
+<script>
+// ═══════════════════════════ DATA ═══════════════════════════════════════
+var BRANDS=[
+  {id:'schneider',logo:'Schneider Electric',series:'Galaxy VX / VL',range:'200–1500 kVA',eta:96,co:{V12:'ok',V2:'ok',LFP:'ok',NMC:'warn'}},
+  {id:'eaton',logo:'Eaton',series:'9395 / 9PXM',range:'225–1100 kVA',eta:96,co:{V12:'ok',V2:'ok',LFP:'warn',NMC:'ok'}},
+  {id:'vertiv',logo:'Vertiv (Liebert)',series:'EXL S1 / EXM',range:'250–1250 kVA',eta:96,co:{V12:'ok',V2:'ok',LFP:'ok',NMC:'ok'}},
+  {id:'abb',logo:'ABB',series:'DPA UPScaleS',range:'25–1200 kVA',eta:96,co:{V12:'ok',V2:'ok',LFP:'warn',NMC:'no'}},
+  {id:'huawei',logo:'Huawei',series:'UPS5000-E',range:'80–800 kVA',eta:97,co:{V12:'ok',V2:'ok',LFP:'ok',NMC:'no'}},
+  {id:'delta',logo:'Delta',series:'Ultron HPH / DPS',range:'250–1500 kVA',eta:96,co:{V12:'ok',V2:'ok',LFP:'warn',NMC:'no'}},
+];
+// fp=m² per string, wt=kg per string, w_mm/d_mm=cabinet dims
+var BLK={
+  V12:[
+    {ah:65, v:12,bps:40,lbl:'65 Ah', br:'CSB HR·GS Yuasa',       dod:.8,fp:.48,wt:840, w:600,d:800,h:2000,spc:1},
+    {ah:100,v:12,bps:40,lbl:'100 Ah',br:'CSB HR·EnerSys HX',     dod:.8,fp:.50,wt:1200,w:600,d:800,h:2000,spc:1},
+    {ah:120,v:12,bps:40,lbl:'120 Ah',br:'EnerSys·C&D Tech',      dod:.8,fp:.55,wt:1440,w:600,d:800,h:2000,spc:1},
+    {ah:150,v:12,bps:40,lbl:'150 Ah',br:'Exide M12·GS Yuasa SHR',dod:.8,fp:.60,wt:1760,w:600,d:800,h:2000,spc:1},
+    {ah:180,v:12,bps:40,lbl:'180 Ah',br:'EnerSys·Sacred Sun',    dod:.8,fp:.66,wt:2000,w:600,d:800,h:2000,spc:1},
+    {ah:200,v:12,bps:40,lbl:'200 Ah',br:'CSB GPL·C&D·Fiamm',     dod:.8,fp:.72,wt:2400,w:600,d:800,h:2000,spc:1},
+    {ah:230,v:12,bps:40,lbl:'230 Ah',br:'EnerSys DataSafe XL',   dod:.8,fp:.72,wt:2720,w:800,d:800,h:2000,spc:1},
+    {ah:260,v:12,bps:40,lbl:'260 Ah',br:'Fiamm·Exide MXES',      dod:.8,fp:.80,wt:3000,w:800,d:800,h:2000,spc:1},
+  ],
+  V2:[
+    {ah:200, v:2,bps:240,lbl:'200 Ah', br:'EnerSys·Fiamm FLL',   dod:.8,fp:1.92,wt:2160, w:1200,d:800,h:2000,spc:1},
+    {ah:400, v:2,bps:240,lbl:'400 Ah', br:'EnerSys HX·C&D TEL',  dod:.8,fp:2.88,wt:4080, w:1200,d:800,h:2000,spc:1},
+    {ah:600, v:2,bps:240,lbl:'600 Ah', br:'GS Yuasa SER·SS',     dod:.8,fp:3.84,wt:6000, w:1500,d:800,h:2000,spc:1},
+    {ah:800, v:2,bps:240,lbl:'800 Ah', br:'EnerSys HC',          dod:.8,fp:4.80,wt:7920, w:1500,d:800,h:2000,spc:1},
+    {ah:1000,v:2,bps:240,lbl:'1000 Ah',br:'C&D·Exide Classic',   dod:.8,fp:5.76,wt:10080,w:1800,d:800,h:2200,spc:1},
+    {ah:1500,v:2,bps:240,lbl:'1500 Ah',br:'Fiamm FLB·SS',        dod:.8,fp:7.20,wt:14400,w:1800,d:800,h:2200,spc:1},
+    {ah:2000,v:2,bps:240,lbl:'2000 Ah',br:'EnerSys·GS Yuasa',    dod:.8,fp:8.64,wt:18000,w:2000,d:1000,h:2200,spc:1},
+  ],
+  LFP:[
+    {ah:100,v:48,bps:10,lbl:'100Ah 48V',br:'BYD·CATL OEM',          dod:.9,fp:.36,wt:280, w:600,d:800,h:2000,spc:2,li:true},
+    {ah:200,v:48,bps:10,lbl:'200Ah 48V',br:'Schneider·Saft',         dod:.9,fp:.54,wt:550, w:600,d:800,h:2000,spc:2,li:true},
+    {ah:300,v:48,bps:10,lbl:'300Ah 48V',br:'Eaton Samsung SDI',      dod:.9,fp:.72,wt:800, w:600,d:800,h:2000,spc:1,li:true},
+    {ah:400,v:48,bps:10,lbl:'400Ah 48V',br:'Vertiv Li-Ion·Saft',     dod:.9,fp:.90,wt:1000,w:800,d:800,h:2000,spc:1,li:true},
+    {ah:100,v:12,bps:40,lbl:'100Ah 12V',br:'Winston·CATL drop-in',   dod:.9,fp:.48,wt:400, w:600,d:800,h:2000,spc:1,li:true},
+    {ah:200,v:12,bps:40,lbl:'200Ah 12V',br:'BYD·Samsung OEM',        dod:.9,fp:.60,wt:720, w:600,d:800,h:2000,spc:1,li:true},
+  ],
+  NMC:[
+    {ah:63, v:48,bps:10,lbl:'63Ah 48V', br:'Samsung SDI E3·Saft',  dod:.85,fp:.27,wt:200,w:600,d:800,h:2000,spc:2,li:true},
+    {ah:100,v:48,bps:10,lbl:'100Ah 48V',br:'Saft Evolion·LG Chem', dod:.85,fp:.36,wt:280,w:600,d:800,h:2000,spc:2,li:true},
+    {ah:200,v:48,bps:10,lbl:'200Ah 48V',br:'Eaton 93PM·Vertiv',    dod:.85,fp:.54,wt:500,w:600,d:800,h:2000,spc:1,li:true},
+    {ah:300,v:48,bps:10,lbl:'300Ah 48V',br:'Samsung SDI·Saft',     dod:.85,fp:.72,wt:700,w:800,d:800,h:2000,spc:1,li:true},
+    {ah:400,v:48,bps:10,lbl:'400Ah 48V',br:'Saft Intensium·CATL',  dod:.85,fp:.90,wt:900,w:800,d:800,h:2000,spc:1,li:true},
+  ],
+};
+var PK_VRLA={1:.47,2:.50,3:.52,4:.54,5:.56,6:.58,7:.60,8:.62,10:.65,12:.67,15:.70,20:.74,30:.78,45:.82,60:.85,90:.88,120:.91,180:.94,240:.96,360:.98,480:.99,1440:1};
+var PK_LI={1:.78,2:.80,3:.82,4:.83,5:.84,6:.85,7:.86,8:.87,10:.88,12:.89,15:.91,20:.93,30:.94,45:.95,60:.96,90:.97,120:.98,240:1,1440:1};
+function getPK(m,li){var t=li?PK_LI:PK_VRLA,k=Object.keys(t).map(Number).sort(function(a,b){return a-b;});for(var i=0;i<k.length;i++)if(k[i]>=m)return t[k[i]];return 1;}
+function getTF(t){if(t>=30)return .96;if(t>=25)return 1;if(t>=20)return 1.04;if(t>=15)return 1.11;return 1.19;}
+
+// ═══════════════════════════ STATE ══════════════════════════════════════
+var gBrand='schneider',gChem='V12',gBI=1,gRT=5,gRes=null,gArr='1row';
+
+// ═══════════════════════════ INIT ═══════════════════════════════════════
+(function(){
+  renderBrands();renderBlocks();renderCompat();updLoad();updTemp();updTier(5);
+})();
+
+// ═══════════════════════════ TABS ═══════════════════════════════════════
+function showTab(id,btn){
+  var panes=document.querySelectorAll('.tab-pane');
+  for(var i=0;i<panes.length;i++)panes[i].classList.remove('act');
+  document.getElementById('tab-'+id).classList.add('act');
+  var btns=document.querySelectorAll('.tab-btn');
+  for(var i=0;i<btns.length;i++)btns[i].classList.remove('act');
+  btn.classList.add('act');
+  if(id==='layout'&&gRes)renderLayout();
+  if(id==='memorial'&&gRes)buildMemorial();
+}
+
+// ═══════════════════════════ BRANDS ════════════════════════════════════
+function renderBrands(){
+  var el=document.getElementById('brand-grid');
+  el.innerHTML=BRANDS.map(function(b){
+    var a=b.id===gBrand?' act':'';
+    return '<div class="bc'+a+'" onclick="selBrand(\''+b.id+'\')">'
+      +'<div class="bc-chk">✓</div>'
+      +'<div class="bc-logo">'+b.logo+'</div>'
+      +'<div class="bc-series">'+b.series+'</div>'
+      +'<span class="bc-range">'+b.range+'</span></div>';
+  }).join('');
+}
+function selBrand(id){
+  gBrand=id;
+  var b=getBrand(id);if(b)document.getElementById('ups-eta').value=b.eta;
+  renderBrands();renderCompat();
+}
+function getBrand(id){for(var i=0;i<BRANDS.length;i++)if(BRANDS[i].id===id)return BRANDS[i];return null;}
+
+// ═══════════════════════════ BLOCKS ════════════════════════════════════
+function renderBlocks(){
+  var ch=['V12','V2','LFP','NMC'];
+  for(var ci=0;ci<ch.length;ci++){
+    var c=ch[ci],el=document.getElementById('bg-'+c);if(!el)continue;
+    var arr=BLK[c],html='';
+    for(var i=0;i<arr.length;i++){
+      var a=(c===gChem&&i===gBI)?' act':'';
+      html+='<div class="blk-card'+a+'" onclick="selBlk(\''+c+'\','+i+')">'
+        +'<div class="blk-ah">'+arr[i].lbl+'</div>'
+        +'<div class="blk-v">'+arr[i].v+'V · '+arr[i].bps+'/str</div>'
+        +'<div class="blk-br">'+arr[i].br+'</div></div>';
+    }
+    el.innerHTML=html;
+  }
+}
+function selBlk(c,i){gChem=c;gBI=i;renderBlocks();}
+
+// ═══════════════════════════ CHEM ══════════════════════════════════════
+function setChem(c,btn){
+  gChem=c;gBI=0;
+  var t=document.querySelectorAll('.ctab');for(var i=0;i<t.length;i++)t[i].classList.remove('act');
+  btn.classList.add('act');
+  var ch=['V12','V2','LFP','NMC'];
+  for(var i=0;i<ch.length;i++)document.getElementById('chem-'+ch[i]).style.display=ch[i]===c?'block':'none';
+  renderBlocks();renderCompat();
+}
+
+// ═══════════════════════════ COMPAT ════════════════════════════════════
+function renderCompat(){
+  var h='<tr><th>Fabricante</th><th style="text-align:center">VRLA 12V</th><th style="text-align:center">VRLA 2V</th><th style="text-align:center">LFP</th><th style="text-align:center">NMC</th></tr>';
+  var ch=['V12','V2','LFP','NMC'];
+  for(var bi=0;bi<BRANDS.length;bi++){
+    var b=BRANDS[bi],isSel=b.id===gBrand;
+    h+='<tr'+(isSel?' class="sel-brand"':'')+'>';
+    h+='<td style="font-weight:'+(isSel?800:600)+'">'+(isSel?'▶ ':'')+b.logo+'</td>';
+    for(var ci=0;ci<ch.length;ci++){
+      var s=b.co[ch[ci]],isCur=ch[ci]===gChem;
+      var cls=s==='ok'?'ck-ok':s==='warn'?'ck-warn':'ck-no';
+      var lbl=s==='ok'?'✓ OK':s==='warn'?'⚠ Restr.':'✕ Não';
+      var ex=(isSel&&isCur)?' style="outline:2px solid currentColor;outline-offset:1px"':'';
+      h+='<td style="text-align:center"><span class="'+cls+'"'+ex+'>'+lbl+'</span></td>';
+    }
+    h+='</tr>';
+  }
+  document.getElementById('compat-tbl').innerHTML=h;
+}
+
+// ═══════════════════════════ RUNTIME ═══════════════════════════════════
+var QUICK=[4,5,6,8,10,15,30,60,120,240,480];
+function setRT(m,btn){
+  gRT=m;document.getElementById('rt-inp').value=m;
+  var b=document.querySelectorAll('.qbtn');for(var i=0;i<b.length;i++)b[i].classList.remove('act');
+  if(btn)btn.classList.add('act');updTier(m);
+}
+function onRTtype(v){
+  var m=parseInt(v)||1;if(m<1)m=1;gRT=m;
+  var b=document.querySelectorAll('.qbtn');for(var i=0;i<b.length;i++)b[i].classList.remove('act');
+  for(var i=0;i<QUICK.length;i++)if(QUICK[i]===m)b[i].classList.add('act');
+  updTier(m);
+}
+function updTier(m){
+  var tiers=[{a:1,b:5,l:'Tier I/II',d:'1–5 min'},{a:6,b:15,l:'Tier III',d:'6–15 min'},
+    {a:16,b:30,l:'Tier III+',d:'16–30 min'},{a:31,b:60,l:'Tier IV',d:'31–60 min'},
+    {a:61,b:240,l:'Extended',d:'1–4h'},{a:241,b:9999,l:'Standalone',d:'4h+'}];
+  var h='';
+  for(var i=0;i<tiers.length;i++){
+    var t=tiers[i],on=(m>=t.a&&m<=t.b)?' on':'';
+    h+='<div class="t-tag'+on+'">'+t.l+'<br><span style="font-weight:400;font-size:.57rem">'+t.d+'</span></div>';
+  }
+  document.getElementById('tier-bar').innerHTML=h;
+}
+
+// ═══════════════════════════ LOAD/TEMP ═════════════════════════════════
+function updLoad(){
+  var kva=parseFloat(document.getElementById('ups-kva').value);
+  var fp=parseFloat(document.getElementById('ups-fp').value);
+  var pct=parseFloat(document.getElementById('load-pct').value)/100;
+  document.getElementById('load-preview').innerHTML='Carga real: <strong>'+(kva*fp*pct).toFixed(0)+' kW</strong> ('+kva+'kVA × FP'+fp+' × '+(pct*100).toFixed(0)+'%)';
+}
+function updTemp(){
+  var t=parseFloat(document.getElementById('amb-temp').value),f=getTF(t);
+  var cls=f>1.02?'ib ib-a':f<0.98?'ib ib-r':'ib ib-t';
+  var note=f>1.02?' — ⚠ baixa temp. reduz capacidade':f<0.98?' — ⚠ alta temp. reduz vida útil':' — nominal';
+  document.getElementById('temp-info').className=cls;
+  document.getElementById('temp-info').innerHTML='CF<sub>temp</sub>('+t+'°C) = <strong>'+f.toFixed(2)+'</strong>'+note;
+}
+
+// ═══════════════════════════ CALC ══════════════════════════════════════
+function calcB(blk){
+  var kva=parseFloat(document.getElementById('ups-kva').value);
+  var fp=parseFloat(document.getElementById('ups-fp').value);
+  var lp=parseFloat(document.getElementById('load-pct').value)/100;
+  var eta=parseFloat(document.getElementById('ups-eta').value)/100;
+  var vbus=parseFloat(document.getElementById('dc-bus').value);
+  var temp=parseFloat(document.getElementById('amb-temp').value);
+  var agef=parseFloat(document.getElementById('age-fac').value);
+  var red=parseInt(document.getElementById('redund').value);
+  var isLi=blk.li===true;
+  var Pload=kva*fp*lp,Pdc=Pload/eta,Idc=Pdc*1000/vbus,th=gRT/60;
+  var Ahraw=Idc*th,pk=getPK(gRT,isLi),tf=getTF(temp);
+  var Ahcor=Ahraw*agef*tf/(pk*blk.dod);
+  var sc=Math.ceil(Ahcor/blk.ah),st=sc+red,total=st*blk.bps;
+  var ekwh=(blk.ah*blk.v*blk.bps*st)/1000;
+  var fptot=st*blk.fp,wttot=st*blk.wt;
+  // Cabinet count: spc = strings per cabinet
+  var spc=blk.spc||1,ncab=Math.ceil(st/spc);
+  return {Pload,Pdc,Idc,th,Ahraw,Ahcor,pk,tf,agef,sc,st,red,total,ekwh,fptot,wttot,vbus,kva,fp,lp,eta,temp,ncab,spc};
+}
+
+function doCalc(){
+  var selBlk=BLK[gChem][gBI];
+  var r=calcB(selBlk);
+  var brand=getBrand(gBrand);
+  var brandName=brand?brand.logo:'UPS';
+  var kva=parseFloat(document.getElementById('ups-kva').value);
+
+  document.getElementById('r-blk').textContent=r.total;
+  document.getElementById('r-blk-s').textContent=r.st+'×'+selBlk.bps+' · '+selBlk.v+'V';
+  document.getElementById('r-str').textContent=r.st;
+  document.getElementById('r-str-s').textContent=r.sc+' calc. +'+r.red+' N+'+r.red;
+  document.getElementById('r-kwh').textContent=r.ekwh.toFixed(1);
+  document.getElementById('r-fp').textContent=r.fptot.toFixed(2);
+  document.getElementById('p-pload').textContent=r.Pload.toFixed(0)+' kW';
+  document.getElementById('p-idc').textContent=r.Idc.toFixed(1)+' A';
+  document.getElementById('p-ahraw').textContent=r.Ahraw.toFixed(1)+' Ah';
+  document.getElementById('p-ahcor').textContent=r.Ahcor.toFixed(1)+' Ah';
+  document.getElementById('p-facs').textContent='×'+r.agef+'/'+r.pk.toFixed(2)+'/'+selBlk.dod;
+  document.getElementById('res-desc').textContent=brandName+' '+kva+'kVA · '+r.Pload.toFixed(0)+'kW · '+gRT+'min · '+selBlk.lbl+' · '+r.st+'str × '+selBlk.bps+'='+r.total+' un. · '+r.ncab+' gabinetes';
+
+  // String vis
+  var svc=document.getElementById('sv-container'),bCls=selBlk.li?'sv-li':'sv-vrla',svh='';
+  for(var s=0;s<r.st;s++){
+    var isR=s>=r.sc;
+    svh+='<div class="sv-row"><span class="sv-badge'+(isR?' red':'')+'">'+( isR?'N+'+(s-r.sc+1):'S'+(s+1))+'</span><div class="sv-track">';
+    var show=Math.min(selBlk.bps,40);
+    for(var b=0;b<show;b++)svh+='<div class="sv-blk '+(isR?'sv-red':bCls)+'"></div>';
+    if(selBlk.bps>40)svh+='<span style="font-size:.58rem;color:var(--mgray);margin-left:2px">…+'+(selBlk.bps-40)+'</span>';
+    svh+='</div></div>';
+  }
+  svc.innerHTML=svh;
+  document.getElementById('sv-legend').innerHTML=r.st+' strings × '+selBlk.bps+' blocos '+selBlk.v+'V = <strong>'+r.total+' unidades</strong> · '+r.ekwh.toFixed(1)+' kWh · '+r.fptot.toFixed(2)+'m² · '+Math.round(r.wttot).toLocaleString('pt-BR')+' kg · <strong>'+r.ncab+' gabinetes</strong>';
+
+  // All options
+  var all=[];
+  var ck=['V12','V2','LFP','NMC'];
+  for(var ci=0;ci<ck.length;ci++){
+    var arr=BLK[ck[ci]];
+    for(var bi=0;bi<arr.length;bi++){
+      var r2=calcB(arr[bi]);
+      var cp=brand?brand.co[ck[ci]]:'ok';
+      all.push({ck:ck[ci],bi:bi,blk:arr[bi],r:r2,isSel:(ck[ci]===gChem&&bi===gBI),compat:cp});
+    }
+  }
+  all.sort(function(a,b){return b.r.fptot-a.r.fptot;});
+  var maxFP=all[0].r.fptot;
+  var tbody=document.getElementById('rank-tbody'),thtml='';
+  for(var i=0;i<all.length;i++){
+    var o=all[i],rank=i+1,isLast=i===all.length-1,isFirst=i===0;
+    var rb=isLast?'rb-gld':i===all.length-2?'rb-slv':i===all.length-3?'rb-brz':isFirst?'rb-bad':'rb-n';
+    var rt=isLast?'🏆':isFirst?'💀':rank;
+    var pct=o.r.fptot/maxFP*100;
+    var bc=isLast?'var(--grn)':isFirst?'var(--red)':pct<40?'var(--teal)':'var(--amber)';
+    var rc=isLast?'best':isFirst?'worst':o.isSel?'sel':'';
+    var ct=o.compat==='ok'?'<span class="ck-ok">✓</span>':o.compat==='warn'?'<span class="ck-warn">⚠</span>':'<span class="ck-no">✕</span>';
+    var chemT=(o.ck==='LFP'||o.ck==='NMC')?'<span class="tag tg-p">Li</span>':'<span class="tag tg-t">VRLA</span>';
+    var selT=o.isSel?'<span class="tag tg-warn">⭐</span>':'';
+    var sc2=isLast?'<span class="tag tg-ok">Melhor</span>':isFirst?'<span class="tag tg-no">+área</span>':pct<30?'<span class="tag tg-ok">Ótimo</span>':pct<60?'<span class="tag tg-t">Bom</span>':'<span class="tag tg-warn">Reg.</span>';
+    thtml+='<tr class="'+rc+'"><td><span class="rbadge '+rb+'">'+rt+'</span></td>'
+      +'<td class="mono" style="font-size:.71rem"><strong>'+o.blk.lbl+'</strong> '+chemT+' '+selT+'<br><span style="color:var(--mgray);font-size:.6rem">'+o.ck+'</span></td>'
+      +'<td class="mono" style="color:var(--teal2);font-weight:700">'+o.r.st+'</td><td class="mono">'+o.blk.bps+'</td>'
+      +'<td class="mono" style="color:var(--amber2);font-weight:700">'+o.r.total+'</td>'
+      +'<td><div class="fp-row"><span class="mono" style="min-width:38px;font-size:.72rem">'+o.r.fptot.toFixed(1)+'m²</span>'
+      +'<div class="fp-track"><div class="fp-fill" style="width:'+pct+'%;background:'+bc+'"></div></div></div></td>'
+      +'<td class="mono">'+Math.round(o.r.wttot).toLocaleString('pt-BR')+'</td>'
+      +'<td class="mono">'+o.r.ekwh.toFixed(1)+'</td><td>'+ct+'</td><td>'+sc2+'</td></tr>';
+  }
+  document.getElementById('rank-tbody').innerHTML=thtml;
+
+  gRes={r:r,selBlk:selBlk,brandName:brandName,all:all,kva:kva};
+  document.getElementById('calc-results').classList.remove('res-hidden');
+  document.getElementById('calc-results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ═══════════════════════════ LAYOUT ════════════════════════════════════
+function setArr(arr,btn){
+  gArr=arr;
+  var b=document.querySelectorAll('.arr-btn');for(var i=0;i<b.length;i++)b[i].classList.remove('act');
+  btn.classList.add('act');
+  renderFloorPlan();
+}
+
+function renderLayout(){
+  var d=gRes;if(!d)return;
+  document.getElementById('layout-no-calc').style.display='none';
+  document.getElementById('layout-content').style.display='block';
+  var r=d.r,b=d.selBlk,nc=r.ncab;
+  var cW=b.w,cD=b.d,cH=b.h;
+  var cW_m=(cW/1000),cD_m=(cD/1000);
+  var totalCabArea=nc*cW_m*cD_m;
+
+  document.getElementById('layout-desc').textContent=
+    d.brandName+' '+d.kva+'kVA · '+b.lbl+' · '+r.st+' strings em '+nc+' gabinetes '+cW+'×'+cD+'×'+cH+' mm';
+
+  // Summary cards
+  document.getElementById('layout-summary').innerHTML=[
+    {lbl:'Nº de Gabinetes',val:nc,sub:r.spc+' string/gab',c:'la'},
+    {lbl:'Dimensão (L×P×A)',val:cW+'×'+cD,sub:cH+'mm (altura)',c:'lt'},
+    {lbl:'Área total gabinetes',val:totalCabArea.toFixed(2)+'m²',sub:'sem corredor',c:'lg'},
+    {lbl:'Peso total banco',val:Math.round(r.wttot).toLocaleString('pt-BR')+'kg',sub:(r.wttot/totalCabArea).toFixed(0)+' kg/m²',c:'lk'},
+  ].map(function(s){
+    return '<div class="ls-box '+s.c+'"><div class="ls-lbl">'+s.lbl+'</div><div class="ls-val">'+s.val+'</div><div class="ls-sub">'+s.sub+'</div></div>';
+  }).join('');
+
+  // Cabinet spec cards
+  var isLi=b.li===true;
+  var typeLabel=gChem==='V12'?'Gabinete VRLA 12V':gChem==='V2'?'Rack VRLA 2V':gChem==='LFP'?'Gabinete LFP':'Gabinete NMC';
+  document.getElementById('cab-spec-grid').innerHTML=
+    '<div class="cab-spec-card"><div class="csc-title">'+typeLabel+'</div>'
+    +'<div class="csc-dim">'+cW+' × '+cD+' mm</div>'
+    +[['Altura',cH+' mm'],['Largura',cW+' mm'],['Profundidade',cD+' mm'],
+      ['Strings por gabinete',r.spc],['Nº blocos por gabinete',(b.bps*r.spc)+' un.'],
+      ['Peso por gabinete (est.)',Math.round(r.wttot/nc).toLocaleString('pt-BR')+' kg'],
+    ].map(function(row){return '<div class="csc-row"><span>'+row[0]+'</span><span>'+row[1]+'</span></div>';}).join('')
+    +'</div>'
+    +'<div class="cab-spec-card"><div class="csc-title">Corredor (Hot/Cold Aisle)</div>'
+    +'<div class="csc-dim">Fria: 1200 mm</div>'
+    +[['Corredor frio (frente)',1200+' mm'],['Corredor quente (atrás)',800+' mm'],
+      ['Total corredor',2000+' mm'],['Acesso manutenção','Frente (padrão)'],
+      ['Ventilação','Fundo/topo'],
+    ].map(function(row){return '<div class="csc-row"><span>'+row[0]+'</span><span>'+row[1]+'</span></div>';}).join('')
+    +'</div>'
+    +'<div class="cab-spec-card"><div class="csc-title">Carga no Piso</div>'
+    +'<div class="csc-dim">'+(r.wttot/totalCabArea).toFixed(0)+' kg/m²</div>'
+    +[['Peso total banco',Math.round(r.wttot).toLocaleString('pt-BR')+' kg'],
+      ['Área total gabinetes',totalCabArea.toFixed(2)+' m²'],
+      ['Carga específica (est.)',(r.wttot/totalCabArea).toFixed(0)+' kg/m²'],
+      ['Piso data center típico','800–1500 kg/m²'],
+      ['Verificar estrutural','Obrigatório'],
+    ].map(function(row){return '<div class="csc-row"><span>'+row[0]+'</span><span>'+row[1]+'</span></div>';}).join('')
+    +'</div>';
+
+  // Cabinet detail
+  document.getElementById('cab-detail').innerHTML=
+    '<p style="font-size:.78rem;line-height:1.7;color:var(--gray)">Para a solução selecionada (<strong>'+b.lbl+'</strong>, '+r.st+' strings), recomenda-se <strong>'+nc+' gabinetes</strong> de bateria modelo <em>'+typeLabel+'</em>, dimensões <strong>'+cW+' × '+cD+' × '+cH+' mm</strong> (L × P × A).<br>'
+    +(isLi?'Gabinetes Li-Ion possuem BMS integrado. Verificar versão de firmware do UPS para protocolo de comunicação (CAN/Modbus). Espaçamento mínimo entre gabinetes: 200 mm lateral por requisito NFPA 855.'
+       :'Gabinetes VRLA não requerem BMS externo. Verificar ventilação mínima de 3 trocas/hora no compartimento de baterias conforme IEC 62040-1.')
+    +'</p>';
+
+  renderFloorPlan();
+}
+
+function renderFloorPlan(){
+  var d=gRes;if(!d)return;
+  var r=d.r,b=d.selBlk,nc=r.ncab;
+  var cW=b.w,cD=b.d;
+  var SC=0.055; // mm to px scale
+  var COLD=1200,HOT=800,SIDE=600; // mm aisles
+  var svgEl=document.getElementById('floorplan-svg');
+
+  var cabRects=[];
+  if(gArr==='1row'){
+    for(var i=0;i<nc;i++)cabRects.push({x:SIDE+i*(cW+20),y:COLD,w:cW,d:cD,idx:i});
+  } else if(gArr==='2row'){
+    var half=Math.ceil(nc/2);
+    for(var i=0;i<nc;i++){
+      var row=Math.floor(i/half),col=i%half;
+      cabRects.push({x:SIDE+col*(cW+20),y:row===0?COLD:COLD+cD+HOT,w:cW,d:cD,idx:i});
+    }
+  } else { // L
+    var legH=Math.ceil(nc*0.6),legV=nc-legH;
+    for(var i=0;i<legH;i++)cabRects.push({x:SIDE+i*(cW+20),y:COLD,w:cW,d:cD,idx:i});
+    for(var i=0;i<legV;i++)cabRects.push({x:SIDE,y:COLD+cD+HOT+i*(cD+20),w:cW,d:cD,idx:legH+i});
+  }
+
+  var maxX=0,maxY=0;
+  for(var i=0;i<cabRects.length;i++){maxX=Math.max(maxX,cabRects[i].x+cabRects[i].w);maxY=Math.max(maxY,cabRects[i].y+cabRects[i].d);}
+  maxX+=SIDE;maxY+=COLD;
+  var svgW=Math.round(maxX*SC+20),svgH=Math.round(maxY*SC+20);
+  svgEl.setAttribute('width',svgW);svgEl.setAttribute('height',svgH);
+  svgEl.setAttribute('viewBox','0 0 '+svgW+' '+svgH);
+
+  var isLi=b.li===true;
+  var cabFill=isLi?'#6b3fa022':'#3f9ea222';
+  var cabStroke=isLi?'#6b3fa0':'#3f9ea2';
+
+  var svg='';
+  // Floor background
+  svg+='<rect x="0" y="0" width="'+svgW+'" height="'+svgH+'" fill="#f8f6f1" rx="8"/>';
+  // Grid
+  for(var gx=0;gx<svgW;gx+=Math.round(1000*SC))svg+='<line x1="'+gx+'" y1="0" x2="'+gx+'" y2="'+svgH+'" stroke="rgba(0,0,0,.06)" stroke-width="1"/>';
+  for(var gy=0;gy<svgH;gy+=Math.round(1000*SC))svg+='<line x1="0" y1="'+gy+'" x2="'+svgW+'" y2="'+gy+'" stroke="rgba(0,0,0,.06)" stroke-width="1"/>';
+
+  // Aisles annotation
+  var firstCab=cabRects[0];
+  if(firstCab){
+    // Cold aisle
+    svg+='<rect x="'+Math.round(firstCab.x*SC)+'" y="'+Math.round(0)+'" width="'+Math.round(cW*SC)+'" height="'+Math.round(COLD*SC)+'" fill="rgba(63,158,162,.08)" rx="3"/>';
+    svg+='<text x="'+Math.round((firstCab.x+cW/2)*SC)+'" y="'+Math.round(COLD*SC/2)+'" font-family="Share Tech Mono,monospace" font-size="9" fill="#2a6c6f" text-anchor="middle" dominant-baseline="middle">CORREDOR FRIO</text>';
+    svg+='<text x="'+Math.round((firstCab.x+cW/2)*SC)+'" y="'+Math.round(COLD*SC/2+12)+'" font-family="Share Tech Mono,monospace" font-size="8" fill="#2a6c6f" text-anchor="middle">'+COLD+' mm</text>';
+  }
+
+  // Cabinets
+  for(var i=0;i<cabRects.length;i++){
+    var c=cabRects[i];
+    var cx=Math.round(c.x*SC),cy=Math.round(c.y*SC),cw=Math.round(c.w*SC),cd=Math.round(c.d*SC);
+    var isRed=c.idx>=r.sc;
+    var fill=isRed?'rgba(184,28,28,.12)':cabFill;
+    var stroke=isRed?'#b81c1c':cabStroke;
+    svg+='<rect x="'+cx+'" y="'+cy+'" width="'+cw+'" height="'+cd+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1.5" rx="3"/>';
+    svg+='<text x="'+(cx+cw/2)+'" y="'+(cy+cd/2-5)+'" font-family="Share Tech Mono,monospace" font-size="9" fill="'+stroke+'" text-anchor="middle" font-weight="700">G'+(i+1)+'</text>';
+    svg+='<text x="'+(cx+cw/2)+'" y="'+(cy+cd/2+7)+'" font-family="Barlow,sans-serif" font-size="7.5" fill="'+stroke+'" text-anchor="middle">'+b.lbl+'</text>';
+    // Width dim arrow
+    if(i===0){
+      svg+='<line x1="'+cx+'" y1="'+(cy+cd+8)+'" x2="'+(cx+cw)+'" y2="'+(cy+cd+8)+'" stroke="#888" stroke-width="1"/>';
+      svg+='<text x="'+(cx+cw/2)+'" y="'+(cy+cd+18)+'" font-family="Share Tech Mono,monospace" font-size="7.5" fill="#888" text-anchor="middle">'+c.w+'mm</text>';
+    }
+  }
+
+  // Depth annotation on first cab
+  if(cabRects.length>0){
+    var fc=cabRects[0];
+    var cx=Math.round(fc.x*SC),cy=Math.round(fc.y*SC),cd=Math.round(fc.d*SC);
+    svg+='<line x1="'+(cx-8)+'" y1="'+cy+'" x2="'+(cx-8)+'" y2="'+(cy+cd)+'" stroke="#888" stroke-width="1"/>';
+    svg+='<text x="'+(cx-16)+'" y="'+(cy+cd/2)+'" font-family="Share Tech Mono,monospace" font-size="7" fill="#888" text-anchor="middle" transform="rotate(-90,'+(cx-16)+','+(cy+cd/2)+')">'+fc.d+' mm</text>';
+  }
+
+  // Total width label
+  if(cabRects.length>0){
+    var lastC=cabRects[Math.min(nc-1,cabRects.filter(function(c){return c.y===cabRects[0].y;}).length-1)];
+    var tW=lastC.x+lastC.w-cabRects[0].x;
+    svg+='<text x="'+Math.round((cabRects[0].x+tW/2)*SC)+'" y="'+(svgH-4)+'" font-family="Share Tech Mono,monospace" font-size="8" fill="var(--amber2)" text-anchor="middle" font-weight="700">Total: '+Math.round(tW/1000*10)/10+'m × '+Math.round((maxY-COLD)/1000*10)/10+'m</text>';
+  }
+
+  // Legend
+  svg+='<rect x="'+(svgW-120)+'" y="6" width="112" height="46" fill="rgba(255,255,255,.9)" rx="5" stroke="rgba(0,0,0,.1)" stroke-width="1"/>';
+  svg+='<rect x="'+(svgW-114)+'" y="12" width="10" height="10" fill="'+cabFill+'" stroke="'+cabStroke+'" stroke-width="1" rx="2"/>';
+  svg+='<text x="'+(svgW-100)+'" y="20" font-family="Barlow,sans-serif" font-size="8" fill="#333">String de cálculo</text>';
+  svg+='<rect x="'+(svgW-114)+'" y="27" width="10" height="10" fill="rgba(184,28,28,.12)" stroke="#b81c1c" stroke-width="1" rx="2"/>';
+  svg+='<text x="'+(svgW-100)+'" y="35" font-family="Barlow,sans-serif" font-size="8" fill="#333">Redundância (N+'+r.red+')</text>';
+  svg+='<text x="'+(svgW-114)+'" y="48" font-family="Share Tech Mono,monospace" font-size="7" fill="#888">'+nc+' gabinetes total</text>';
+
+  svgEl.innerHTML=svg;
+
+  // Legend below
+  document.getElementById('fp-legend').innerHTML=
+    '<div class="legend-item"><div class="legend-swatch" style="background:'+cabFill+';border:1.5px solid '+cabStroke+'"></div>Gabinete — string de cálculo ('+r.sc+' total)</div>'
+    +'<div class="legend-item"><div class="legend-swatch" style="background:rgba(184,28,28,.12);border:1.5px solid #b81c1c"></div>Gabinete redundante (N+'+r.red+')</div>'
+    +'<div class="legend-item"><div class="legend-swatch" style="background:rgba(63,158,162,.08)"></div>Corredor frio (frente dos gabinetes)</div>'
+    +'<div class="legend-item" style="font-family:\'Share Tech Mono\',monospace;font-size:.68rem;color:var(--amber2)"><strong>Escala ≈ 1m = '+Math.round(1000*SC)+'px</strong></div>';
+}
+
+// ═══════════════════════════ MEMORIAL ══════════════════════════════════
+function buildMemorial(){
+  if(!gRes){return;}
+  var d=gRes,r=d.r,b=d.selBlk,isLi=b.li===true;
+  var today=new Date().toLocaleDateString('pt-BR');
+  var chemName=gChem==='V12'?'VRLA 12V':gChem==='V2'?'VRLA 2V':gChem==='LFP'?'Li-Ion LFP':'Li-Ion NMC';
+  var sorted=d.all.slice().sort(function(a,b2){return a.r.fptot-b2.r.fptot;});
+  var best=sorted[0];
+  var kva=parseFloat(document.getElementById('ups-kva').value);
+
+  var h='<div class="mem-wrap">'
+    +'<div class="mem-hdr"><div class="mem-h">Memorial de Cálculo — Banco de Baterias para UPS de Data Center</div>'
+    +'<div class="mem-s">Metodologia IEEE 485:2020 / IEC 60896 / IEC 62040-3 &nbsp;·&nbsp; Gerado em '+today+'</div></div>'
+
+    // 1. Objeto
+    +'<div class="mem-sec"><div class="mem-ttl">1. Objeto e Escopo</div>'
+    +'<div class="mem-prose">Este memorial tem por objeto o dimensionamento do banco de baterias para o sistema de alimentação ininterrupta (UPS) de um data center, conforme os critérios estabelecidos pela norma IEEE Std 485:2020 (<em>Recommended Practice for Sizing Lead-Acid Batteries for Stationary Applications</em>) e pelas normas complementares IEC 60896-21/22 para baterias VRLA. O sistema de UPS é do tipo dupla conversão on-line (classe VFI-SS-111 conforme IEC 62040-3), com barramento DC de '+r.vbus+' V nominal. A química de bateria adotada é <strong>'+chemName+'</strong> (bloco '+b.lbl+'), e a autonomia requerida é de <strong>'+gRT+' minutos</strong> a plena carga operacional.</div></div>'
+
+    // 2. Dados
+    +'<div class="mem-sec"><div class="mem-ttl">2. Dados do Sistema UPS</div>'
+    +'<table class="mem-tbl">'
+    +'<tr><td>Fabricante / Linha</td><td>'+d.brandName+'</td></tr>'
+    +'<tr><td>Potência nominal do UPS</td><td>'+kva+' kVA</td></tr>'
+    +'<tr><td>Fator de potência de saída</td><td>FP = '+r.fp+' → Potência ativa = '+(kva*r.fp).toFixed(0)+' kW</td></tr>'
+    +'<tr><td>Carga aplicada</td><td>'+(r.lp*100).toFixed(0)+'% de '+(kva*r.fp).toFixed(0)+' kW → P<sub>carga</sub> = <strong>'+r.Pload.toFixed(0)+' kW</strong></td></tr>'
+    +'<tr><td>Eficiência do inversor DC→AC</td><td>'+(r.eta*100).toFixed(0)+'% → P<sub>DC</sub> = '+r.Pdc.toFixed(0)+' kW</td></tr>'
+    +'<tr><td>Topologia</td><td>Dupla conversão on-line (VFI-SS-111 — IEC 62040-3)</td></tr>'
+    +'<tr><td>Tensão do barramento DC</td><td>'+r.vbus+' V</td></tr>'
+    +'</table></div>'
+
+    // 3. Critérios
+    +'<div class="mem-sec"><div class="mem-ttl">3. Critérios de Dimensionamento (IEEE 485:2020)</div>'
+    +'<div class="mem-prose">O dimensionamento segue a metodologia da seção 5 do IEEE 485:2020, que estabelece os seguintes fatores de correção sobre a capacidade calculada: (a) fator de temperatura CF<sub>temp</sub>, que ajusta a capacidade disponível da bateria em função da temperatura ambiente de projeto; (b) fator de envelhecimento CF<sub>age</sub>, que assegura que o banco atenda à autonomia requerida ao final de sua vida útil, quando a capacidade residual é mínima; (c) fator de taxa de descarga (Peukert) CF<sub>Pk</sub>, que corrige a capacidade nominal (C10) para a taxa de descarga real correspondente ao tempo de autonomia.</div>'
+    +'<table class="mem-tbl">'
+    +'<tr><td>Autonomia requerida</td><td>'+gRT+' min = '+r.th.toFixed(4)+' h</td></tr>'
+    +'<tr><td>Temperatura de projeto</td><td>'+r.temp+'°C</td></tr>'
+    +'<tr><td>CF<sub>temp</sub> (fator de temperatura)</td><td>'+r.tf.toFixed(2)+'&nbsp;(IEEE 485 Tabela A.1 / IEC 60896)</td></tr>'
+    +'<tr><td>CF<sub>age</sub> (fator de envelhecimento)</td><td>'+r.agef+'&nbsp;(margem para capacidade residual de '+(1/r.agef*100).toFixed(0)+'% ao fim da vida útil)</td></tr>'
+    +'<tr><td>CF<sub>Pk</sub> (Peukert para t='+gRT+'min, '+(isLi?'Li-Ion':'VRLA')+')</td><td>'+r.pk.toFixed(3)+'&nbsp;(capacidade disponível a essa taxa de descarga)</td></tr>'
+    +'<tr><td>DoD máxima permitida</td><td>'+(b.dod*100).toFixed(0)+'%&nbsp;(protege ciclo de vida da bateria)</td></tr>'
+    +'<tr><td>Redundância adotada</td><td>N+'+r.red+'&nbsp;('+( r.red===0?'sem redundância':r.red===1?'uma string redundante':r.red+' strings redundantes')+')</td></tr>'
+    +'</table></div>'
+
+    // 4. Cálculo
+    +'<div class="mem-sec"><div class="mem-ttl">4. Desenvolvimento do Cálculo</div>'
+    +'<div class="mstep"><span class="mstep-n">a</span><div><strong>Cálculo da corrente de descarga no barramento DC:</strong><br>A corrente de descarga é determinada pela potência total que o inversor exige do banco de baterias, dividida pela tensão nominal do barramento DC.'
+    +'<div class="formula">I<sub>dc</sub> = (P<sub>DC</sub> × 1000) / V<sub>bus</sub> = ('+r.Pdc.toFixed(0)+' kW × 1000) / '+r.vbus+' V = <strong>'+r.Idc.toFixed(2)+' A</strong></div></div></div>'
+
+    +'<div class="mstep"><span class="mstep-n">b</span><div><strong>Cálculo dos Ah brutos necessários:</strong><br>Multiplica-se a corrente de descarga pelo tempo de autonomia em horas para obter a capacidade bruta.'
+    +'<div class="formula">Ah<sub>raw</sub> = I<sub>dc</sub> × t = '+r.Idc.toFixed(2)+' A × '+r.th.toFixed(4)+' h = <strong>'+r.Ahraw.toFixed(2)+' Ah</strong></div></div></div>'
+
+    +'<div class="mstep"><span class="mstep-n">c</span><div><strong>Aplicação dos fatores de correção (IEEE 485 — Equação principal):</strong><br>Os fatores de temperatura, envelhecimento e Peukert são aplicados para determinar a capacidade necessária do bloco/célula, levando-se em conta a profundidade de descarga máxima.'
+    +'<div class="formula">Ah<sub>corr</sub> = Ah<sub>raw</sub> × CF<sub>age</sub> × CF<sub>temp</sub> / (CF<sub>Pk</sub> × DoD)<br>'
+    +'= '+r.Ahraw.toFixed(2)+' × '+r.agef+' × '+r.tf.toFixed(2)+' / ('+r.pk.toFixed(3)+' × '+b.dod+')<br>'
+    +'= <strong>'+r.Ahcor.toFixed(2)+' Ah</strong></div>'
+    +'Interpretação: cada string do banco deve fornecer no mínimo <strong>'+r.Ahcor.toFixed(1)+' Ah</strong> nas condições de projeto. Como o bloco selecionado possui '+b.ah+' Ah nominais, são necessárias múltiplas strings em paralelo.</div></div>'
+
+    +'<div class="mstep"><span class="mstep-n">d</span><div><strong>Blocos em série por string:</strong><br>O número de blocos/células em série é determinado pela razão entre a tensão do barramento DC e a tensão nominal de cada bloco.'
+    +'<div class="formula">N<sub>série</sub> = V<sub>bus</sub> / V<sub>bloco</sub> = '+r.vbus+' V / '+b.v+' V = <strong>'+b.bps+' blocos por string</strong></div></div></div>'
+
+    +'<div class="mstep"><span class="mstep-n">e</span><div><strong>Strings em paralelo (calculadas):</strong><br>Divide-se a capacidade corrigida (Ah) pela capacidade nominal do bloco selecionado, arredondando para cima.'
+    +'<div class="formula">N<sub>str</sub> = ⌈ Ah<sub>corr</sub> / Ah<sub>bloco</sub> ⌉ = ⌈ '+r.Ahcor.toFixed(2)+' / '+b.ah+' ⌉ = <strong>'+r.sc+' strings</strong></div></div></div>'
+
+    +'<div class="mstep"><span class="mstep-n">f</span><div><strong>Strings totais com redundância N+'+r.red+':</strong>'
+    +'<div class="formula">N<sub>total</sub> = N<sub>str</sub> + '+r.red+' = '+r.sc+' + '+r.red+' = <strong>'+r.st+' strings</strong></div></div></div>'
+
+    +'<div class="mstep"><span class="mstep-n">g</span><div><strong>Total de blocos/células:</strong>'
+    +'<div class="formula">Total = N<sub>total</sub> × N<sub>série</sub> = '+r.st+' × '+b.bps+' = <strong>'+r.total+' unidades</strong></div></div></div>'
+    +'</div>'
+
+    // 5. Resultado
+    +'<div class="mem-sec"><div class="mem-ttl">5. Resultado Final — Solução Dimensionada</div>'
+    +'<table class="mem-tbl">'
+    +'<tr><td>Química / Tipo</td><td>'+chemName+(isLi?' (Li-Ion)':' (VRLA)')+'</td></tr>'
+    +'<tr><td>Bloco / Módulo selecionado</td><td>'+b.lbl+', '+b.v+'V — '+b.br.split('·')[0].trim()+'</td></tr>'
+    +'<tr><td>Blocos em série por string</td><td>'+b.bps+' unidades</td></tr>'
+    +'<tr><td>Strings calculadas</td><td>'+r.sc+'</td></tr>'
+    +'<tr><td>Strings com redundância (N+'+r.red+')</td><td>'+r.st+'</td></tr>'
+    +'<tr><td><strong>Total de blocos/células</strong></td><td><strong>'+r.total+' unidades</strong></td></tr>'
+    +'<tr><td>Energia total armazenada</td><td>'+r.ekwh.toFixed(2)+' kWh (nominal)</td></tr>'
+    +'<tr><td>Nº de gabinetes necessários</td><td><strong>'+r.ncab+' gabinetes</strong> ('+r.spc+' string/gab) — '+b.w+'×'+b.d+'×'+b.h+' mm</td></tr>'
+    +'<tr><td>Área de piso total (gabinetes)</td><td>'+r.fptot.toFixed(2)+' m²</td></tr>'
+    +'<tr><td>Peso total estimado</td><td>'+Math.round(r.wttot).toLocaleString('pt-BR')+' kg → carga específica: '+(r.wttot/r.fptot).toFixed(0)+' kg/m²</td></tr>'
+    +'</table></div>'
+
+    // 6. Melhor opção
+    +'<div class="mem-sec"><div class="mem-ttl">6. Solução de Menor Pegada (Referência de Mercado)</div>'
+    +'<div class="mem-prose">Para comparação, a solução com menor área de piso disponível para a mesma autonomia e carga utiliza <strong>'+best.blk.lbl+'</strong> ('+best.ck+'), resultando em '+best.r.total+' unidades em '+best.r.st+' strings e área de piso de apenas '+best.r.fptot.toFixed(2)+' m², com peso de '+Math.round(best.r.wttot).toLocaleString('pt-BR')+' kg.</div>'
+    +'<table class="mem-tbl">'
+    +'<tr><td>Tipo</td><td>'+best.ck+'</td></tr>'
+    +'<tr><td>Bloco</td><td>'+best.blk.lbl+'</td></tr>'
+    +'<tr><td>Total unidades</td><td>'+best.r.total+'</td></tr>'
+    +'<tr><td>Nº de gabinetes</td><td>'+best.r.ncab+'</td></tr>'
+    +'<tr><td>Área de piso</td><td>'+best.r.fptot.toFixed(2)+' m²</td></tr>'
+    +'<tr><td>Peso</td><td>'+Math.round(best.r.wttot).toLocaleString('pt-BR')+' kg</td></tr>'
+    +'<tr><td>Compatibilidade com UPS selecionado</td><td>'+(getBrand(gBrand)?getBrand(gBrand).co[best.ck]:'—')+'</td></tr>'
+    +'</table></div>'
+
+    +'<div class="mem-note"><strong>Notas técnicas:</strong> Memorial estimativo conforme IEEE 485:2020. Validar com tabelas de descarga do fabricante específico do bloco para o projeto executivo. Verificar capacidade estrutural do piso (mínimo recomendado: 1,5× o peso calculado). Baterias Li-Ion exigem BMS homologado, HVAC dedicado e proteção contra runaway térmico (NFPA 855 / ABNT NBR 16612). VRLA: ventilação mínima de 3 trocas/hora no compartimento (IEC 62040-1). Recomenda-se substituição do banco VRLA a cada 5 anos (design life) ou quando capacidade residual cair abaixo de 80% (IEEE 1188:2005).</div>'
+    +'</div>';
+
+  document.getElementById('mem-output').innerHTML=h;
+}
+
+// ═══════════════════════════ REFS FILTER ═══════════════════════════════
+function filterRef(cat,btn){
+  var b=document.querySelectorAll('.rf-btn');for(var i=0;i<b.length;i++)b[i].classList.remove('act');
+  btn.classList.add('act');
+  var cards=document.querySelectorAll('.ref-card');
+  for(var i=0;i<cards.length;i++){
+    var c=cards[i];
+    if(cat==='all')c.style.display='block';
+    else c.style.display=c.getAttribute('data-cat')===cat?'block':'none';
+  }
+}
+
+// ═══════════════════════════ LAYOUT INIT ═══════════════════════════════
+(function initLayout(){
+  document.getElementById('layout-no-calc').style.display='block';
+  document.getElementById('layout-content').style.display='none';
+  document.getElementById('memorial-no-calc').style.display='block';
+  document.getElementById('memorial-content').style.display='none';
+})();
+
+// Watch for calc results to show memorial/layout tabs
+var origDoCalc=doCalc;
+doCalc=function(){
+  origDoCalc();
+  if(gRes){
+    document.getElementById('memorial-no-calc').style.display='none';
+    document.getElementById('memorial-content').style.display='block';
+  }
+};
+</script>
+</body>
+</html>
